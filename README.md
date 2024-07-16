@@ -25,28 +25,29 @@ $ go run . URL <DirectoryName>
 ```
 
 4. Set the download speed, limiting the rate speed of a download
-For example:
 
+For example:
 ```
 $ go run . --speed=100 URL
 ```
 
 5. Downloading file in background.
-For example:
 
+For example:
 ```
 $ go run . --background URL
 ```
 
 6. Downloading multiple files at same time, reading a file containing multiple download links asynchronously.
 
+For example:
 ```
 $ go run . <file_with_url.txt>
 ```
 
 7. Main Feature will be to download an entire website also known as mirror.
-For example:
 
+For example:
 ```
 $ go run . <websiteLink>
 ```
