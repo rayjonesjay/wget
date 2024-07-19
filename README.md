@@ -2,6 +2,28 @@
 
 WGET is a utility that is used for non-interactive downloads over the net.
 
+## Project Structure
+```
+.
+├── background
+│   └── background.go
+├── download
+│   ├── download.go
+│   └── download_test.go
+├── LICENSE
+├── mirror
+│   └── mirror.go
+├── multiple
+│   └── multiple.go
+├── README.md
+├── saveToDirectory
+│   └── savetodir.go
+└── speed
+    └── speed.go
+
+7 directories, 9 files
+```
+
 ## Functionalities
 1. wget downloads a file given an URL-(Uniform Resource Locator).
 
