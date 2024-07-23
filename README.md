@@ -6,22 +6,24 @@ WGET is a utility that is used for non-interactive downloads over the net.
 ```
 .
 ├── background
-│   └── background.go
+│   └── background.go
+├── directory
+│   └── savetodir.go
 ├── download
-│   ├── download.go
-│   └── download_test.go
+│   ├── download.go
+│   └── download_test.go
+├── errors
+│   └── errors.go
 ├── LICENSE
 ├── mirror
-│   └── mirror.go
+│   └── mirror.go
 ├── multiple
-│   └── multiple.go
+│   └── multiple.go
 ├── README.md
-├── saveToDirectory
-│   └── savetodir.go
 └── speed
     └── speed.go
 
-7 directories, 9 files
+8 directories, 10 files
 ```
 
 ## Functionalities
