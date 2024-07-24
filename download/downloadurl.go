@@ -9,15 +9,6 @@ import (
 	"strings"
 )
 
-// func main() {
-// 	url := os.Args[1]
-// 	err := DownloadUrl(url)
-// 	if err != nil {
-// 		fmt.Printf("Error: %v\n", err)
-// 		os.Exit(1)
-// 	}
-// }
-
 func DownloadUrl(url string) error {
 	if !IsValidURL(url) {
 		return fmt.Errorf("invalid-url")
