@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// RenamingFile function accepts url and filename as arguments and saves downloaded file using the provided name
+// ToFile accepts url and filename as arguments and saves downloaded file using the provided name
 func ToFile(url, filename string) error {
 	response, err := http.Get(url)
 	if err != nil {
