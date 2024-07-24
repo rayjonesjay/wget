@@ -1,3 +1,4 @@
+// download package contains functionalites for downloading a file, and also downloading and saving to a specified file name
 package download
 
 import (
