@@ -5,9 +5,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 )
 
-// Mock server to simulate file download
+// createMockServer sets up a mock server with the given responseCode and responseBody
 func createMockServer(responseCode int, responseBody string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(responseCode)
@@ -26,7 +27,7 @@ func TestToFile_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer os.Remove(filename)
+	defer os.Remove(filename) // Ensure the file is removed after the test
 
 	// Check if the file is created and has the correct content
 	content, err := os.ReadFile(filename)
@@ -74,5 +75,14 @@ func TestToFile_FileWriteError(t *testing.T) {
 	err := ToFile(mockServer.URL, filename)
 	if err == nil || err.Error() != "error saving file: write /dev/full: no space left on device" {
 		t.Errorf("expected error saving file, got %v", err)
+	}
+}
+
+// TestGetCurrentTime is a test function for the GetCurrentTime, checks whether it returns the current time and in correct format as wget
+func TestGetCurrentTime(t *testing.T) {
+	currentTime := time.Now()
+	formattedTime := currentTime.Format("2006-01-02 15:04:05")
+	if "--" + formattedTime + "--" != GetCurrentTime() {
+		t.Error("error getting correct time")
 	}
 }

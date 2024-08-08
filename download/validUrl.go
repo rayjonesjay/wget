@@ -1,7 +1,6 @@
 package download
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 )
@@ -9,7 +8,6 @@ import (
 // isValidURL checks if the given string is a valid URL
 func IsValidURL(urlStr string) bool {
 	parsedURL, err := url.Parse(urlStr)
-	fmt.Println(parsedURL)
 	if err != nil {
 		return false
 	}
