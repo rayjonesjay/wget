@@ -1,11 +1,16 @@
 package main
 
 import (
-	"wget/download"
+	"fmt"
+	"os"
+
+	"wget/syscheck"
 )
 
 func main() {
-	url := "https://learn.zone01kisumu.ke/git/root/public/src/branch/master/subjects/ascii-art/"
-	file := "standard.txt"
-	download.DownloadUrl(url + file)
+	if err := syscheck.CheckOperatingSystem(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+		os.Exit(1)
+	}
+	// download.DownloadUrl()
 }
