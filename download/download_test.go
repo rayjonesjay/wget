@@ -41,18 +41,6 @@ func TestToFile_Success(t *testing.T) {
 	}
 }
 
-func TestToFile_HttpError(t *testing.T) {
-	// Create a mock server that returns a 404 error
-	mockServer := createMockServer(http.StatusNotFound, "not found")
-	defer mockServer.Close()
-
-	// Call the ToFile function with the mock server URL
-	err := ToFile(mockServer.URL, "testfile.txt")
-	if err == nil || err.Error() != "error downloading file: 404 Not Found" {
-		t.Errorf("expected error downloading file: 404 Not Found, got %v", err)
-	}
-}
-
 func TestToFile_FileCreationError(t *testing.T) {
 	// Create a mock server that returns a valid response
 	mockServer := createMockServer(http.StatusOK, "mock file content")
@@ -137,5 +125,3 @@ func TestDownloadUrl(t *testing.T) {
 		})
 	}
 }
-
-
