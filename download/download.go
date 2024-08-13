@@ -8,17 +8,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"wget/types"
 )
 
-const (
-	_ = iota 
-	// Size of Data in Kilobytes
-	KB = 1000 * iota
-	// Size of Data in Megabytes
-	MB = 1000 * KB
-	// Size of Data in Gigabytes
-	GB = 1000 * MB
-)
 
 // RenamingFile function accepts url and filename as arguments and saves downloaded file using the provided name
 func ToFile(url, filename string) error {
@@ -124,14 +116,14 @@ func IsValidURL(urlStr string) bool {
 func RoundOfSizeOfData(dataInBytes int64) string {
 	var size float64
 	var unit string
-	if dataInBytes >= GB {
-		size = float64(dataInBytes) / MB
+	if dataInBytes >= types.GB {
+		size = float64(dataInBytes) / types.MB
 		unit = "MB"
-	} else if dataInBytes >= MB {
-		size = float64(dataInBytes) / MB
+	} else if dataInBytes >= types.MB {
+		size = float64(dataInBytes) / types.MB
 		unit = "MB"
-	} else if dataInBytes >= KB {
-		size = float64(dataInBytes) / MB
+	} else if dataInBytes >= types.KB {
+		size = float64(dataInBytes) / types.MB
 		unit = "MB"
 	} else {
 		size = float64(dataInBytes)
