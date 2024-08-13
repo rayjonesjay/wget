@@ -11,12 +11,13 @@ import (
 )
 
 const (
+	_ = iota 
 	// Size of Data in Kilobytes
-	KB = 1000
+	KB = 1000 * iota
 	// Size of Data in Megabytes
-	MB = 1000 * 1000
+	MB = 1000 * KB
 	// Size of Data in Gigabytes
-	GB = 1000 * 1000 * 1000
+	GB = 1000 * MB
 )
 
 // RenamingFile function accepts url and filename as arguments and saves downloaded file using the provided name
