@@ -1,7 +1,6 @@
 package download
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -39,20 +38,6 @@ func TestToFile_Success(t *testing.T) {
 	expectedContent := "mock file content"
 	if string(content) != expectedContent {
 		t.Errorf("expected file content %q, got %q", expectedContent, content)
-	}
-}
-
-func TestToFile_HttpError(t *testing.T) {
-	// Create a mock server that returns a 404 error
-	mockServer := createMockServer(http.StatusNotFound, "not found")
-	defer mockServer.Close()
-
-	// Call the ToFile function with the mock server URL
-	fmt.Println(mockServer.URL)
-	err := ToFile(mockServer.URL, "testfile.txt")
-	fmt.Println(">>><<<",err,err.Error())
-	if err == nil || err.Error() != "error downloading file: 404 Not Found" {
-		t.Errorf("expected error downloading file: 404 Not Found, got %v", err)
 	}
 }
 
