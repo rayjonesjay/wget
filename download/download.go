@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
 	"wget/types"
 )
-
 
 // RenamingFile function accepts url and filename as arguments and saves downloaded file using the provided name
 func ToFile(url, filename string) error {
@@ -57,9 +57,12 @@ func DownloadUrl(url string) error {
 	reqMessage := "sending request, awaiting response..."
 
 	if response.StatusCode == http.StatusOK {
+
 		fmt.Printf("\r"+reqMessage+" status %d OK\n", response.StatusCode)
 		err = nil
+
 	} else if response.StatusCode == http.StatusNotFound {
+
 		fmt.Printf(reqMessage+" %d: Not Found\n", response.StatusCode)
 		return err
 	}
@@ -116,13 +119,8 @@ func IsValidURL(urlStr string) bool {
 func RoundOfSizeOfData(dataInBytes int64) string {
 	var size float64
 	var unit string
-	if dataInBytes >= types.GB {
-		size = float64(dataInBytes) / types.MB
-		unit = "MB"
-	} else if dataInBytes >= types.MB {
-		size = float64(dataInBytes) / types.MB
-		unit = "MB"
-	} else if dataInBytes >= types.KB {
+
+	if dataInBytes >= types.KB {
 		size = float64(dataInBytes) / types.MB
 		unit = "MB"
 	} else {
