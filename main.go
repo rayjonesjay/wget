@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"wget/download"
+	"wget/errors"
 	"wget/syscheck"
 )
 
@@ -12,5 +14,5 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
 	}
-	// download.DownloadUrl()
+	download.DownloadUrl(errors.Link1)
 }
