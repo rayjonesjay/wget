@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
 	"wget/types"
 )
-
 
 // RenamingFile function accepts url and filename as arguments and saves downloaded file using the provided name
 func ToFile(url, filename string) error {
@@ -85,13 +85,13 @@ func DownloadUrl(url string) error {
 
 // isValidURL checks if the given string is a valid URL
 func IsValidURL(urlStr string) bool {
-	parsedURL, err := url.Parse(urlStr)
+	parsedURL, err := url.ParseRequestURI(urlStr)
 	if err != nil {
 		return false
 	}
 
 	// Check if the scheme is http or https
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+	if !parsedURL.IsAbs() || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
 		return false
 	}
 
