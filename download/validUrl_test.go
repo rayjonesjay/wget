@@ -44,10 +44,24 @@ func TestIsValidURL(t *testing.T) {
 			args: args{url: "ftp://example.com"},
 			want: false,
 		},
-
 		{
 			name: "Invalid URL with missing domain",
 			args: args{url: "https://.com"},
+			want: false,
+		},
+		{
+			name: "Invalid URL with leading dot in domain",
+			args: args{url: "https://.example.com"},
+			want: false,
+		},
+		{
+			name: "Invalid URL with missing TLD",
+			args: args{url: "https://example"},
+			want: false,
+		},
+		{
+			name: "Invalid URL with leading hyphen in domain",
+			args: args{url: "https://-example.com"},
 			want: false,
 		},
 	}
