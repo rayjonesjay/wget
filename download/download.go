@@ -93,7 +93,7 @@ func IsValidURL(urlStr string) bool {
 		return false
 	}
 
-	// Ensure the URL is absolute and has a valid scheme (http or https)
+	// Check if the scheme is http or https
 	if !parsedURL.IsAbs() || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
 		return false
 	}
