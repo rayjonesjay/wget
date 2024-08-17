@@ -16,7 +16,7 @@ func GetCurrentTime() string {
 	return formattedTime
 }
 
-// Feedback willgive user additional information that is happening during the download process
+// Feedback will give user additional information that is happening during the download process
 // It takes a variable number of arguments depending on the download that is happennin
 func Feedback(URL string) {
 	start := "start at " + GetCurrentTime()
