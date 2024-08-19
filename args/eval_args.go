@@ -1,23 +1,33 @@
 // args package deals with detecting arguments and evaluating the arguments
-// and passing them to different functions.
+// and parsing them to the intended functions.
 package args
 
 import (
-	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
+	"wget/download"
+	"wget/errorss"
 	"wget/types"
 )
 
 // EvalArgs takes a slice of arguments and redirects them to the specific functions.
 func EvalArgs(arguments []string) {
-	// detecting go run . http://example.com
-	for _, arg := range arguments {
+	// if one argument is passed:
+	if len(arguments) == 1 {
+		arg := arguments[0]
+
+		// display the man page of our program and exit with 0 status code
 		if isHelp(arg) {
-			fmt.Println(types.Manual)
-			os.Exit(0)
+			errorss.WriteError(types.Manual, 0)
+		}
+
+		// if the argument passed is a valid url, then call the downldoad function
+		isValid, err := download.IsValidURL(arg)
+		if isValid {
+			download.DownloadUrl(arg)
+		} else {
+			errorss.WriteError(err, 1)
 		}
 	}
 }
