@@ -16,6 +16,9 @@ var (
 
 	// use when url is absolute
 	ErrNotAbsolute = fmt.Errorf("url is not absolute")
+
+	// use when domain format is invalid
+	ErrInvalidDomainFormat = fmt.Errorf("invalid domain format")
 )
 
 // WriteError takes errorMessage of any type and statusCode and writes errorMessage to stdout and exits with statusCode
