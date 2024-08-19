@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"wget/errorss"
 	"wget/types"
 )
 
@@ -36,8 +37,9 @@ func ToFile(url, filename string) error {
 }
 
 func DownloadUrl(url string) error {
-	if !IsValidURL(url) {
-		return fmt.Errorf("invalid-url")
+	isValid, err := IsValidURL(url)
+	if !isValid {
+		return err
 	}
 
 	Feedback(url)
@@ -87,27 +89,52 @@ func DownloadUrl(url string) error {
 }
 
 // IsValidURL checks if the given string is a valid URL
-func IsValidURL(urlStr string) bool {
+func IsValidURL(urlStr string) (bool, error) {
 	parsedURL, err := url.ParseRequestURI(urlStr)
 	if err != nil {
-		return false
+		return false, fmt.Errorf(fmt.Sprintf("%v", err))
 	}
 
-	// Check if the scheme is http or https
-	if !parsedURL.IsAbs() || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
-		return false
+	// check if scheme component of the uri is empty
+	if parsedURL.IsAbs() {
+		return false, errorss.ErrNotAbsolute
 	}
 
-	// Ensure the host is not empty, and doesn't start with a dot or hyphen
-	if strings.HasPrefix(parsedURL.Host, ".") || strings.HasPrefix(parsedURL.Host, "-") || parsedURL.Host == "" {
-		return false
+	// check if the scheme is neither http nor https
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return false, errorss.ErrWrongSheme
 	}
 
-	// Check that the host contains at least one dot (valid domain format)g
+	// if host is empty
+	if IsStringEmpty(parsedURL.Host) {
+		return false, errorss.ErrEmptyHostName
+	}
+
+	// ensure host does not start with . or -
+	if strings.HasPrefix(parsedURL.Host, ".") || strings.HasPrefix(parsedURL.Host, "-") {
+		return false, fmt.Errorf(fmt.Sprintf("wrong host format %q",parsedURL.Host))
+	}
+
+	// Check that the host contains at least one dot (valid domain format)
 	if !strings.Contains(parsedURL.Host, ".") {
-		return false
+		return false, errorss.ErrInvalidDomainFormat
 	}
 
+	return true, nil
+}
+
+// IsStringEmpty checks if string is empty
+func IsStringEmpty(s string) bool {
+	if len(s) == 0 {
+		return true
+	}
+	i := 0
+	for i < len(s) {
+		if s[i] != ' ' {
+			return false
+		}
+		i++
+	}
 	return true
 }
 
