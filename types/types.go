@@ -8,8 +8,6 @@ Usage: $ ./wget [OPTION] [URL]
 
 Try './wget --help' for more options.`
 
-	DownloadDirectory = "$HOME/Downloads"
-
 	Manual = `wget 1.0.0, a non-interactive retriever.
 Usage: ./wget [OPTION] [URL]
 
@@ -29,6 +27,16 @@ FLAG:				 USAGE:						EXPLANATION:
 
 bug reports, questions, issues to https://github.com/rayjonesjay
 `
+	Version = "1.0.0"
+
+	DefaultDownloadDirectory = "$HOME/Downloads"
+
+	// default port used by http if not specified
+	DefaultHTTPPort = "80"
+
+	// default port used by https if not specified
+	DefaultHTTPSPort = "443"
+
 )
 
 const (
