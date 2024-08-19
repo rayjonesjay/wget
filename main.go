@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"wget/args"
-	"wget/errors"
+	"wget/errorss"
 	"wget/syscheck"
 	"wget/types"
 )
@@ -19,7 +19,7 @@ func main() {
 	arguments := os.Args[1:]
 	if len(arguments) == 0 {
 		// no arguments were passed, so return
-		errors.WriteError(types.UsageMessage,1)
+		errorss.WriteError(types.UsageMessage, 1)
 		return
 	}
 
