@@ -23,6 +23,6 @@ var (
 
 // WriteError takes errorMessage of any type and statusCode and writes errorMessage to stdout and exits with statusCode
 func WriteError(errorMessage interface{}, statusCode int) {
-	os.Stdout.WriteString(fmt.Sprintf("%v", errorMessage))
+	os.Stdout.WriteString(fmt.Sprintf("%v\n", errorMessage))
 	os.Exit(statusCode)
 }
