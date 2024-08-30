@@ -2,6 +2,7 @@
 package errorss
 
 import (
+	"errors"
 	"fmt"
 	"os"
 )
@@ -9,20 +10,26 @@ import (
 // all error types are defined here and their respective messages, because repetition is boring
 var (
 	// use when url scheme is not http or https
-	ErrWrongSheme = fmt.Errorf("wrong url scheme")
+	ErrWrongScheme = errors.New("wrong url scheme")
 
 	// use when host is empty
-	ErrEmptyHostName = fmt.Errorf("host missing")
+	ErrEmptyHostName = errors.New("host missing")
 
 	// use when url is absolute
-	ErrNotAbsolute = fmt.Errorf("url is not absolute")
+	ErrNotAbsolute = errors.New("url is not absolute")
 
 	// use when domain format is invalid
-	ErrInvalidDomainFormat = fmt.Errorf("invalid domain format")
+	ErrInvalidDomainFormat = errors.New("invalid domain format")
+
+	ErrWrongPath = errors.New("invalid path")
 )
 
-// WriteError takes errorMessage of any type and statusCode and writes errorMessage to stdout and exits with statusCode
+// WriteError takes errorMessage of any type and statusCode
+// then writes errorMessage to stderr and exits with the given statusCode
 func WriteError(errorMessage interface{}, statusCode int) {
-	os.Stdout.WriteString(fmt.Sprintf("%v\n", errorMessage))
+	_, err := os.Stderr.WriteString(fmt.Sprintf("%v\n", errorMessage))
+	if err != nil {
+		return
+	}
 	os.Exit(statusCode)
 }
