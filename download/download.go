@@ -102,7 +102,7 @@ func IsValidURL(urlStr string) (bool, error) {
 
 	// check if the scheme is neither http nor https
 	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return false, errorss.ErrWrongSheme
+		return false, errorss.ErrWrongScheme
 	}
 
 	// if host is empty
@@ -112,7 +112,7 @@ func IsValidURL(urlStr string) (bool, error) {
 
 	// ensure host does not start with . or -
 	if strings.HasPrefix(parsedURL.Host, ".") || strings.HasPrefix(parsedURL.Host, "-") {
-		return false, fmt.Errorf(fmt.Sprintf("wrong host format %q",parsedURL.Host))
+		return false, fmt.Errorf(fmt.Sprintf("wrong host format %q", parsedURL.Host))
 	}
 
 	// Check that the host contains at least one dot (valid domain format)
