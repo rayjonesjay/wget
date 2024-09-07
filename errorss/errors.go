@@ -1,4 +1,4 @@
-// errors package contains all error types, error messages and functions for handing errors
+// Package errorss errors package contains all error types, error messages and functions for handing errors
 package errorss
 
 import (
@@ -9,16 +9,16 @@ import (
 
 // all error types are defined here and their respective messages, because repetition is boring
 var (
-	// use when url scheme is not http or https
+	// ErrWrongScheme use when url scheme is not http or https
 	ErrWrongScheme = errors.New("wrong url scheme")
 
-	// use when host is empty
+	// ErrEmptyHostName use when host is empty
 	ErrEmptyHostName = errors.New("host missing")
 
-	// use when url is absolute
+	// ErrNotAbsolute use when url is absolute
 	ErrNotAbsolute = errors.New("url is not absolute")
 
-	// use when domain format is invalid
+	// ErrInvalidDomainFormat use when domain format is invalid
 	ErrInvalidDomainFormat = errors.New("invalid domain format")
 
 	ErrWrongPath = errors.New("invalid path")
