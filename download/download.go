@@ -138,7 +138,7 @@ func IsStringEmpty(s string) bool {
 	return true
 }
 
-// RoundOfSizeData converts dataInBytes (size of file downloaded) in bytes to the nearest size
+// RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
 func RoundOfSizeOfData(dataInBytes int64) string {
 	var size float64
 	var unit string
