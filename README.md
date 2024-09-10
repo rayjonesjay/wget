@@ -1,5 +1,4 @@
 # WGET
-
 WGET is a utility that is used for non-interactive downloads over the net.
 
 ## Project Structure
