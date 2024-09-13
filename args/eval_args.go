@@ -19,7 +19,7 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 	for _, arg := range arguments {
 		switch {
 		case IsHelpFlag(arg):
-			errorss.WriteError(help.UsageMessage, 0)
+			errorss.WriteError(help.UsageMessage, 0, true)
 
 		case IsBackgroundFlag(arg):
 			Arguments.BackgroundMode = true
@@ -69,7 +69,7 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 		default:
 			isValid, err := download.IsValidURL(arg)
 			if err != nil {
-				errorss.WriteError(err, 1)
+				errorss.WriteError(err, 1, true)
 			}
 			if isValid {
 				Arguments.Links = append(Arguments.Links, arg)
@@ -117,7 +117,7 @@ func IsPathFlag(s string) (bool, string) {
 		return false, ""
 	}
 	if matches[1] == "." || matches[1] == ".." {
-		errorss.WriteError(fmt.Sprintf("%v %s\n", errorss.ErrWrongPath, matches[1]), 1)
+		errorss.WriteError(fmt.Sprintf("%v %s\n", errorss.ErrWrongPath, matches[1]), 1, true)
 	}
 	return true, matches[1]
 }
