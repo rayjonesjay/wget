@@ -19,7 +19,7 @@ func main() {
 	arguments := os.Args[1:]
 	if len(arguments) == 0 {
 		// no arguments were passed, so return
-		errorss.WriteError(help.UsageMessage, 1)
+		errorss.WriteError(help.UsageMessage, 1, true)
 		return
 	}
 
