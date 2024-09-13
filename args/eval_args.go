@@ -9,6 +9,7 @@ import (
 	"wget/download"
 
 	"wget/errorss"
+	"wget/help"
 	"wget/types"
 )
 
@@ -18,7 +19,7 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 	for _, arg := range arguments {
 		switch {
 		case IsHelpFlag(arg):
-			errorss.WriteError(types.UsageMessage, 0)
+			errorss.WriteError(help.UsageMessage, 0)
 
 		case IsBackgroundFlag(arg):
 			Arguments.BackgroundMode = true
@@ -75,7 +76,7 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 			}
 		}
 	}
-	return Arguments
+	return
 }
 
 // IsOutputFlag checks if -O=<filename> flag has been parsed with a valid filename and returns true
