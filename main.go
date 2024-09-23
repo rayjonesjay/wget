@@ -15,7 +15,6 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
 	}
-	// download.DownloadUrl(errors.Link1)
 	arguments := os.Args[1:]
 	if len(arguments) == 0 {
 		// no arguments were passed, so return
@@ -23,7 +22,6 @@ func main() {
 		return
 	}
 
-	// if arguments are passed.
 	arg := args.EvalArgs(arguments)
 
 	err := arg.Download()
