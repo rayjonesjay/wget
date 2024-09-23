@@ -3,11 +3,11 @@
 package args
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
-	"wget/download"
-
 	"wget/errorss"
 	"wget/help"
 	"wget/types"
@@ -34,6 +34,11 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 			isParsed, path := InputFile(arg)
 			if isParsed {
 				Arguments.InputFile = path
+				slice, err := ReadUrlFromFile(path)
+				if err != nil {
+					errorss.WriteError(err, 2, false)
+				}
+				Arguments.Links = append(Arguments.Links, slice...)
 			}
 
 		case arg == "--mirror":
@@ -67,7 +72,7 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		default:
-			isValid, err := download.IsValidURL(arg)
+			isValid, err := types.IsValidURL(arg)
 			if err != nil {
 				errorss.WriteError(err, 1, true)
 			}
@@ -77,6 +82,27 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 		}
 	}
 	return
+}
+
+// ReadUrlFromFile opens fpath to read the contents of the file (urls) and returns a slice of the urls
+func ReadUrlFromFile(fpath string) (links []string, err error) {
+	fd, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		link := strings.TrimSpace(scanner.Text())
+		ok, err := types.IsValidURL(link)
+		if err != nil {
+			errorss.WriteError(err, 1, true)
+		}
+		if ok {
+			links = append(links, link)
+		}
+	}
+	return links, nil
 }
 
 // IsOutputFlag checks if -O=<filename> flag has been parsed with a valid filename and returns true
@@ -102,7 +128,7 @@ func InputFile(s string) (bool, string) {
 	re := regexp.MustCompile(pattern)
 	if re.MatchString(s) {
 		matches := re.FindStringSubmatch(s)
-		filename := matches[1]
+		filename := matches[2]
 		return true, filename
 	}
 	return false, ""
