@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
+	"time"
+	"wget/errorss"
 )
 
 const (
@@ -73,95 +76,74 @@ type Arg struct {
 func (a *Arg) Download() error {
 
 	var wg sync.WaitGroup
-
-	// if a download is successful, the link will be stored here.
-	successfulDownloads := make([]string, 0)
-
-	// channel to receive URLs that are successfully downloaded.
-	successChannel := make(chan string)
-
-	// channel to receive errors
-	errorChannel := make(chan error)
-
-	// start a go routine to handle successful downloads
-	go func() {
-		for url := range successChannel {
-			successfulDownloads = append(successfulDownloads, url)
-		}
-	}()
-
-	// start a go routine to handle errors
-	go func() {
-		for url := range errorChannel {
-			_, _ = fmt.Fprintf(os.Stderr, "error: %s\n", url)
-		}
-	}()
-
 	for _, url := range a.Links {
 		wg.Add(1)
-
-		go func(url string) {
-
+		go func() {
 			defer wg.Done()
-
-			// determine the output path and filename
-			outputFilePath := a.determineOutputPath(url)
-
-			// open the output file for writing, create if it does not exist, truncate if it does exist.
-			outFile, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-
+			err := a.GetResource(url)
 			if err != nil {
-				errorChannel <- fmt.Errorf("failed to open file for writing %w: %s", err, url)
-				return
+				errorss.WriteError(err, 2, false)
 			}
-			defer outFile.Close()
-
-			// get the data
-			resp, err := http.Get(url)
-			fmt.Print("HTTP request sent, awaiting response...")
-			if err != nil {
-				errorChannel <- fmt.Errorf("failed to download %s: %w", url, err)
-				return
-			}
-
-			if resp.StatusCode == 200 {
-				a.LogDownloadInfo(resp)
-			} // else log errors here
-
-			defer resp.Body.Close()
-
-			// copy the data to the outFile
-			n, err := io.Copy(outFile, resp.Body)
-			if err != nil {
-				errorChannel <- fmt.Errorf("failed to save URL %s to file %w", url, err)
-				return
-			}
-			fmt.Printf("downloaded %d bytes from %s\n", n, url)
-
-			// successful download
-			successChannel <- url
-		}(url)
+		}()
 	}
 
-	// wait for all downloading to complete
 	wg.Wait()
-	close(successChannel)
-	close(errorChannel)
-
-	//fmt.Println(">>>")
-	for _, successURL := range successfulDownloads {
-		successfulDownloads = append(successfulDownloads, successURL)
-	}
-	printUrls(successfulDownloads)
 	return nil
 }
 
-func (a *Arg) LogDownloadInfo(response *http.Response) {
-	code := response.StatusCode
-	msg := fmt.Sprintf("\rHTTP request sent, awaiting response... %d OK", code)
-	fmt.Println(msg)
+func (a *Arg) GetResource(url string) (err error) {
+	outputFilePath := a.determineOutputPath(url)
+	// open the output file for writing, create if it does not exist, truncate if it does exist.
+	outFile, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+
+	if err != nil {
+		return fmt.Errorf("failed to open file for writing %w: %s", err, url)
+	}
+	defer outFile.Close()
+
+	fmt.Println(GetCurrentTime(true))
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	fmt.Print("\rsending request, awaiting response...")
+	resp, err := client.Get(url)
+	if err != nil {
+		errorss.WriteError(err, 2, false)
+	}
+
+	fmt.Printf("\rsending request, awaiting response... %d %s\n", resp.StatusCode, http.StatusText(resp.StatusCode))
+
+	if err != nil {
+		return fmt.Errorf("failed to download %s: %w", url, err)
+	}
+
+	defer resp.Body.Close()
+
+	n, err := io.Copy(outFile, resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to save URL %s to file %w", url, err)
+	}
+	r, _ := client.Head(url)
+	contentSizeMB := RoundOfSizeOfData(r.ContentLength)
+
+	fmt.Printf("\rcontent size: %d [~%s]\n", n, contentSizeMB)
+
+	fmt.Println(GetCurrentTime(false))
+	return nil
 }
 
+/*
+start at 2017-10-14 03:46:06
+sending request, awaiting response... status 200 OK
+content size: 56370 [~0.06MB]
+saving file to: ./meme.jpg
+ 55.05 KiB / 55.05 KiB [================================================================================================================] 100.00% 1.24 MiB/s 0s
+
+Downloaded [https://pbs.twimg.com/media/EMtmPFLWkAA8CIS.jpg]
+finished at 2017-10-14 03:46:07
+*/
 // determineOutputPath determines the full path for the output file
 func (a *Arg) determineOutputPath(url string) string {
 	var outputFilePath string
@@ -192,7 +174,7 @@ func printUrls(urls []string) {
 			res += url
 		}
 	}
-	fmt.Printf("Download finished:	[%s]\n", res)
+	fmt.Printf("Downloaded	[%s]\n", res)
 }
 
 // IsEmpty function checks whether an iterable is empty, an iterable is a string,array or slice.
@@ -218,4 +200,144 @@ func (a *Arg) IsEmpty(data interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func (a *Arg) MirrorWeb() error {
+
+	for _, link := range a.Links {
+		parsedUrl, err := url.Parse(link)
+		if err != nil {
+			return err
+		}
+
+		// by default the downloaded data will be saved to the name of domain if not specified
+		domain := parsedUrl.Host
+		directoryToSaveData := filepath.Join(a.SavePath, domain)
+
+		err = os.MkdirAll(directoryToSaveData, 0755)
+		if err != nil {
+			return err
+		}
+
+		// Download and parse the HTML/CSS
+		//err = a.downloadAndParseHTML(link, directoryToSaveData)
+		//if err != nil {
+		//	return err
+		//}
+	}
+	return nil
+}
+
+//func (a *Arg) downloadAndParseHTML(link, saveDir) error {
+//	{
+//	}
+//}
+
+// rejectFileBasedOnExtension method checks if a file should be downloaded based on
+// its file extension
+func (a *Arg) rejectFileBasedOnExtension(url string) bool {
+	for _, ext := range a.Rejects {
+		if strings.HasSuffix(url, ext) {
+			return true
+		}
+	}
+	return false
+}
+
+// shouldExcludeDir method checks if an url belongs to an excluded directory
+func (a *Arg) shouldExcludeDir(url string) bool {
+	for _, directory := range a.Exclude {
+		if strings.Contains(url, directory) {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *Arg) Run() {
+	if a.Mirror {
+		// run in mirror mode
+		_ = a.MirrorWeb()
+		//if err != nil {
+		//	return
+		//}
+	} else {
+		// regular download
+		_ = a.Download()
+		//if err != nil {
+		//	return
+		//}
+	}
+}
+
+//func (a *Arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
+//	// replace href/src urls with local file paths
+//	// example: href="http://example.com/style.css" -> href="./style.css"
+//	return htmlCOncent
+//}
+
+// GetCurrentTime prints a textual representation of the current time, it takes isStart
+// if isStart is true it indicates the download process has started, if false means end of the current download
+func GetCurrentTime(isStart bool) string {
+	// Get the current time
+	currentTime := time.Now()
+
+	// Format time to print up to seconds
+	formattedTime := currentTime.Format("2006-01-02 15:04:05")
+
+	if isStart {
+		return fmt.Sprintf("start at %s", formattedTime)
+	}
+	return fmt.Sprintf("finished at %s", formattedTime)
+}
+
+// IsValidURL checks if the given string is a valid URL
+func IsValidURL(urlStr string) (bool, error) {
+	parsedURL, err := url.ParseRequestURI(urlStr)
+	if err != nil {
+		return false, fmt.Errorf("invalid URL: %v", err)
+	}
+
+	// check if scheme component of the URL is empty
+	if !parsedURL.IsAbs() {
+		return false, errorss.ErrNotAbsolute
+	}
+
+	// check if the scheme is neither http nor https
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return false, errorss.ErrWrongScheme
+	}
+
+	// if host is empty
+	if parsedURL.Host == "" {
+		return false, errorss.ErrEmptyHostName
+	}
+
+	// ensure host does not start with . or -
+	if strings.HasPrefix(parsedURL.Host, ".") || strings.HasPrefix(parsedURL.Host, "-") {
+		return false, fmt.Errorf("wrong host format %q", parsedURL.Host)
+	}
+
+	// Check that the host contains at least one dot (valid domain format) or is localhost
+	if !strings.Contains(parsedURL.Host, ".") && parsedURL.Host != "localhost" {
+		return false, errorss.ErrInvalidDomainFormat
+	}
+
+	return true, nil
+}
+
+// RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
+func RoundOfSizeOfData(dataInBytes int64) string {
+	var size float64
+	var unit string
+
+	if dataInBytes >= KB {
+		size = float64(dataInBytes) / MB
+		unit = "MB"
+	} else {
+		size = float64(dataInBytes)
+		unit = "KB"
+	}
+
+	return fmt.Sprintf("%.2f%s", size, unit)
 }
