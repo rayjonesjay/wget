@@ -330,14 +330,15 @@ func IsValidURL(urlStr string) (bool, error) {
 func RoundOfSizeOfData(dataInBytes int64) string {
 	var size float64
 	var unit string
-
-	if dataInBytes >= KB {
+	if dataInBytes >= GB {
+		size = float64(dataInBytes) / GB
+		unit = "GB"
+	} else if dataInBytes >= KB {
 		size = float64(dataInBytes) / MB
 		unit = "MB"
 	} else {
 		size = float64(dataInBytes)
 		unit = "KB"
 	}
-
 	return fmt.Sprintf("%.2f%s", size, unit)
 }
