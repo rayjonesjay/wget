@@ -109,8 +109,12 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 // and filename if successful else  returns false and empty string
 func IsOutputFlag(arg string) (bool, string) {
 	if strings.HasPrefix(arg, "-O=") {
-		filename := strings.TrimPrefix(arg, "-O=")
-		return true, filename
+		filename := strings.TrimSpace(strings.TrimPrefix(arg, "-O="))
+		if filename == "" || filename == "-" || filename == ".." || filename == "." || strings.HasPrefix(filename, "/") {
+			return false, ""
+		} else {
+			return true, filename
+		}
 	}
 	return false, ""
 }
@@ -129,6 +133,9 @@ func InputFile(s string) (bool, string) {
 	if re.MatchString(s) {
 		matches := re.FindStringSubmatch(s)
 		filename := matches[2]
+		if filename == "." || filename == ".." || strings.HasPrefix(filename, "/") {
+			return false, ""
+		}
 		return true, filename
 	}
 	return false, ""
@@ -138,7 +145,7 @@ func InputFile(s string) (bool, string) {
 func IsPathFlag(s string) (bool, string) {
 	pattern := `^-P=(.+)`
 	re := regexp.MustCompile(pattern)
-	matches := re.FindAllString(s, 1)
+	matches := re.FindStringSubmatch(s)
 	if matches == nil {
 		return false, ""
 	}
