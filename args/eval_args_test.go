@@ -1,7 +1,9 @@
 package args
 
 import (
+	"reflect"
 	"testing"
+	"wget/types"
 )
 
 // TestIsHelpFlag is a test function for the IsHelpFlag function
@@ -101,6 +103,41 @@ func TestIsOutputFlag(t *testing.T) {
 			got1, got2 := IsOutputFlag(tt.input)
 			if got1 != tt.want1 || got2 != tt.want2 {
 				t.Errorf("IsOutputFlag() = got [%v %v], want [%v %v]", got1, got2, tt.want1, tt.want2)
+			}
+		})
+	}
+}
+
+func TestEvalArgs(t *testing.T) {
+	type args struct {
+		arguments []string
+	}
+
+	// Initialize arguments map for test cases
+	mappy := map[string][]string{
+		"Omega": {"--output", "file.txt"},
+		"Beta":  {"-O=file.txt", "-i=urls.txt", "-P=/home/Downloads"},
+		"Alpha": {"https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt"},
+	}
+
+	tests := []struct {
+		name          string
+		args          args
+		wantArguments types.Arg
+	}{
+		// when no arguments have been parsed
+		{"Omega", args{arguments: mappy["Omega"]}, types.Arg{}},
+
+		{"Beta", args{arguments: mappy["Beta"]}, types.Arg{OutputFile: "file.txt", InputFile: "urls.txt", SavePath: "/home/Downloads"}},
+
+		{name: "Alpha", args: args{arguments: mappy["Alpha"]}, wantArguments: types.Arg{Links: []string{"https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt"}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotArguments := EvalArgs(tt.args.arguments); !reflect.DeepEqual(gotArguments, tt.wantArguments) {
+				s := "-------------------------------------------------------------"
+				t.Errorf("EvalArgs() %s \ngot %v\nwant %v \n%s", s, gotArguments, tt.wantArguments, s)
 			}
 		})
 	}
