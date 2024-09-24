@@ -91,10 +91,33 @@ func (a *Arg) Download() error {
 	return nil
 }
 
+// CheckIfFileExists will check if fname exists in the provided path if it exists it will add an extension and append a number starting from 1 to the original filename
+func CheckIfFileExists(fname string) string {
+
+	// get the file extension
+	extension := filepath.Ext(fname)
+	base := fname
+	if extension != "" {
+		base = fname[:len(fname)-len(extension)]
+	}
+	n := 1
+
+	for {
+		_, err := os.Stat(fname)
+		if os.IsNotExist(err) {
+			return fname
+		}
+
+		fname = fmt.Sprintf("%s%d%s", base, n, extension)
+		n++
+	}
+}
+
+// GetResource takes an url to a resource and attempts to fetch the specified resource, if an error occurs err is returned
 func (a *Arg) GetResource(url string) (err error) {
-	outputFilePath := a.determineOutputPath(url)
+	outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
 	// open the output file for writing, create if it does not exist, truncate if it does exist.
-	outFile, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	outFile, err := os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE, 0644)
 
 	if err != nil {
 		return fmt.Errorf("failed to open file for writing %w: %s", err, url)
