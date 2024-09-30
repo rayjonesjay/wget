@@ -14,8 +14,9 @@ import (
 	"wget/xurl"
 )
 
-// EvalArgs builds and returns the download context, as defined by (parsing and evaluating) the commandline arguments.
-func EvalArgs(arguments []string) (Arguments ctx.Context) {
+// DownloadContext builds and returns the download context,
+// as defined by (parsing and evaluating) the commandline arguments.
+func DownloadContext(arguments []string) (Arguments ctx.Context) {
 	for _, arg := range arguments {
 		switch {
 		case IsHelpFlag(arg):

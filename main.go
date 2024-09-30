@@ -23,7 +23,7 @@ func main() {
 		return
 	}
 
-	arg := args.EvalArgs(arguments)
+	arg := args.DownloadContext(arguments)
 	d := types.Arg{Context: &arg}
 
 	err := d.Download()
