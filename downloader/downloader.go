@@ -16,12 +16,12 @@ import (
 	"wget/errorss"
 )
 
-// Arg represents the commandline arguments passed through the command line by the user
+// arg represents the commandline arguments passed through the command line by the user
 // example: $ go run . -O=file.txt -B https://www.example.com
-// -0 will be a field in Arg that specifies the output file to save the resource
+// -0 will be a field in arg that specifies the output file to save the resource
 // -B will send the download process to background mode
 // https://www.example.com is the link to where the resource resides
-type Arg struct {
+type arg struct {
 	*ctx.Context
 }
 
@@ -64,7 +64,7 @@ var (
 
 // Get downloads any files, website mirrors, or resources as defined by the provided download context
 func Get(c ctx.Context) {
-	a := Arg{Context: &c}
+	a := arg{Context: &c}
 	err := a.Get()
 	if err != nil {
 		// TODO: handle errors during downloads
@@ -72,8 +72,8 @@ func Get(c ctx.Context) {
 	}
 }
 
-// Download handles normal downloads based on the provided URLs and other flags in the Arg struct
-func (a *Arg) Download() error {
+// Download handles normal downloads based on the provided URLs and other flags in the arg struct
+func (a *arg) Download() error {
 
 	var wg sync.WaitGroup
 	for _, url := range a.Links {
@@ -114,7 +114,7 @@ func CheckIfFileExists(fname string) string {
 }
 
 // GetResource takes an url to a resource and attempts to fetch the specified resource, if an error occurs err is returned
-func (a *Arg) GetResource(url string) (err error) {
+func (a *arg) GetResource(url string) (err error) {
 	outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
 	// open the output file for writing, create if it does not exist, truncate if it does exist.
 	outFile, err := os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE, 0644)
@@ -168,7 +168,7 @@ Downloaded [https://pbs.twimg.com/media/EMtmPFLWkAA8CIS.jpg]
 finished at 2017-10-14 03:46:07
 */
 // determineOutputPath determines the full path for the output file
-func (a *Arg) determineOutputPath(url string) string {
+func (a *arg) determineOutputPath(url string) string {
 	var outputFilePath string
 
 	if a.OutputFile != "" {
@@ -202,7 +202,7 @@ func printUrls(urls []string) {
 
 // IsEmpty function checks whether an iterable is empty, an iterable is a string,array or slice.
 // it returns true if the `data` which is expected to be an iterable, is empty else return false
-func (a *Arg) IsEmpty(data interface{}) bool {
+func (a *arg) IsEmpty(data interface{}) bool {
 
 	// get the value of the interface
 	val := reflect.ValueOf(data)
@@ -225,7 +225,7 @@ func (a *Arg) IsEmpty(data interface{}) bool {
 	}
 }
 
-func (a *Arg) MirrorWeb() error {
+func (a *arg) MirrorWeb() error {
 
 	for _, link := range a.Links {
 		parsedUrl, err := url.Parse(link)
@@ -251,14 +251,14 @@ func (a *Arg) MirrorWeb() error {
 	return nil
 }
 
-//func (a *Arg) downloadAndParseHTML(link, saveDir) error {
+//func (a *arg) downloadAndParseHTML(link, saveDir) error {
 //	{
 //	}
 //}
 
 // rejectFileBasedOnExtension method checks if a file should be downloaded based on
 // its file extension
-func (a *Arg) rejectFileBasedOnExtension(url string) bool {
+func (a *arg) rejectFileBasedOnExtension(url string) bool {
 	for _, ext := range a.Rejects {
 		if strings.HasSuffix(url, ext) {
 			return true
@@ -268,7 +268,7 @@ func (a *Arg) rejectFileBasedOnExtension(url string) bool {
 }
 
 // shouldExcludeDir method checks if an url belongs to an excluded directory
-func (a *Arg) shouldExcludeDir(url string) bool {
+func (a *arg) shouldExcludeDir(url string) bool {
 	for _, directory := range a.Exclude {
 		if strings.Contains(url, directory) {
 			return true
@@ -277,7 +277,7 @@ func (a *Arg) shouldExcludeDir(url string) bool {
 	return false
 }
 
-func (a *Arg) Get() (err error) {
+func (a *arg) Get() (err error) {
 	if a.Mirror {
 		// run in mirror mode
 		err = a.MirrorWeb()
@@ -288,7 +288,7 @@ func (a *Arg) Get() (err error) {
 	return
 }
 
-//func (a *Arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
+//func (a *arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
 //	// replace href/src urls with local file paths
 //	// example: href="http://example.com/style.css" -> href="./style.css"
 //	return htmlCOncent
