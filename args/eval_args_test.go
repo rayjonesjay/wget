@@ -3,7 +3,7 @@ package args
 import (
 	"reflect"
 	"testing"
-	"wget/types"
+	"wget/ctx"
 )
 
 // TestIsHelpFlag is a test function for the IsHelpFlag function
@@ -131,19 +131,24 @@ func TestEvalArgs(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          args
-		wantArguments types.Arg
+		wantArguments ctx.Context
 	}{
 		// when no arguments have been parsed
-		{"Omega", args{arguments: mappy["Omega"]}, types.Arg{}},
+		{"Omega", args{arguments: mappy["Omega"]}, ctx.Context{}},
 
 		{
 			"Beta", args{arguments: mappy["Beta"]},
-			types.Arg{OutputFile: "file.txt", InputFile: "urls.txt", SavePath: "/home/Downloads"},
+			ctx.Context{OutputFile: "file.txt", InputFile: "urls.txt", SavePath: "/home/Downloads"},
 		},
 
 		{
 			name: "Alpha", args: args{arguments: mappy["Alpha"]},
-			wantArguments: types.Arg{Links: []string{"https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt"}},
+			wantArguments: ctx.Context{
+				Links: []string{
+					"https://learn.zone01kisumu.ke" +
+						"/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt",
+				},
+			},
 		},
 	}
 
