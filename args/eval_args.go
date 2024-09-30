@@ -8,14 +8,14 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"wget/ctx"
 	"wget/errorss"
 	"wget/help"
-	"wget/types"
+	"wget/xurl"
 )
 
-// EvalArgs takes a slice of strings parsed at the command line and adds them to types.Arg
-// as field values and returns types.Arg
-func EvalArgs(arguments []string) (Arguments types.Arg) {
+// EvalArgs builds and returns the download context, as defined by (parsing and evaluating) the commandline arguments.
+func EvalArgs(arguments []string) (Arguments ctx.Context) {
 	for _, arg := range arguments {
 		switch {
 		case IsHelpFlag(arg):
@@ -72,7 +72,7 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		default:
-			isValid, err := types.IsValidURL(arg)
+			isValid, err := xurl.IsValidURL(arg)
 			if err != nil {
 				errorss.WriteError(err, 1, true)
 			}
@@ -94,7 +94,7 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		link := strings.TrimSpace(scanner.Text())
-		ok, err := types.IsValidURL(link)
+		ok, err := xurl.IsValidURL(link)
 		if err != nil {
 			errorss.WriteError(err, 1, true)
 		}
@@ -110,7 +110,9 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 func IsOutputFlag(arg string) (bool, string) {
 	if strings.HasPrefix(arg, "-O=") {
 		filename := strings.TrimSpace(strings.TrimPrefix(arg, "-O="))
-		if filename == "" || filename == "-" || filename == ".." || filename == "." || strings.HasPrefix(filename, "/") {
+		if filename == "" || filename == "-" || filename == ".." || filename == "." || strings.HasPrefix(
+			filename, "/",
+		) {
 			return false, ""
 		} else {
 			return true, filename

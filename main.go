@@ -5,6 +5,7 @@ import (
 	"os"
 	"wget/args"
 	"wget/help"
+	"wget/types"
 
 	"wget/errorss"
 	"wget/syscheck"
@@ -23,8 +24,9 @@ func main() {
 	}
 
 	arg := args.EvalArgs(arguments)
+	d := types.Arg{Context: &arg}
 
-	err := arg.Download()
+	err := d.Download()
 	if err != nil {
 		return
 	}

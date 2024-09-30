@@ -12,8 +12,18 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"wget/ctx"
 	"wget/errorss"
 )
+
+// Arg represents the commandline arguments passed through the command line by the user
+// example: $ go run . -O=file.txt -B https://www.example.com
+// -0 will be a field in Arg that specifies the output file to save the resource
+// -B will send the download process to background mode
+// https://www.example.com is the link to where the resource resides
+type Arg struct {
+	*ctx.Context
+}
 
 const (
 	// KB Size of Data in KiloBytes
@@ -51,26 +61,6 @@ var (
 	// DefaultHTTPSPort is the default port used by https if not specified.
 	DefaultHTTPSPort = "443"
 )
-
-// Arg represents the commandline arguments passed through the command line by the user
-// example: $ go run . -O=file.txt -B https://www.example.com
-// -0 will be a field in Arg that specifies the output file to save the resource
-// -B will send the download process to background mode
-// https://www.example.com is the link to where the resource resides
-type Arg struct {
-	OutputFile     string   // identified by the -O flag
-	BackgroundMode bool     // identified by the -B flag
-	Links          []string // identified by the regexp pattern (http|https)://\w+ ,specifies path to resources on the web
-	SavePath       string   // identified by the -P flag, specifies the location where to save the resource
-	InputFile      string   // identified by the -i flag, specifies a file contains url(s)
-	Rejects        []string // identified by the -R or --reject flag contains a list of resources to reject
-	Mirror         bool     // identified by the --mirror flag, indicates whether to download an entire website or not
-	RateLimit      string   // identified by the --rate-limit flag, specifies the download speed when fetching a resource
-	RateLimitValue int64    // if RateLimit is specified, RateLimitValue will be
-	IsHelp         bool     // identified by the --help flag, if pared it will print our program manual
-	ConvertLinks   bool     // identified by the --convert-links
-	Exclude        []string // identified by the --exclude or -X, takes a comma separated list of paths(directory) to avoid when fetching a resource
-}
 
 // Download handles normal downloads based on the provided URLs and other flags in the Arg struct
 func (a *Arg) Download() error {
@@ -312,41 +302,6 @@ func GetCurrentTime(isStart bool) string {
 		return fmt.Sprintf("start at %s", formattedTime)
 	}
 	return fmt.Sprintf("finished at %s", formattedTime)
-}
-
-// IsValidURL checks if the given string is a valid URL
-func IsValidURL(urlStr string) (bool, error) {
-	parsedURL, err := url.ParseRequestURI(urlStr)
-	if err != nil {
-		return false, fmt.Errorf("invalid URL: %v", err)
-	}
-
-	// check if scheme component of the URL is empty
-	if !parsedURL.IsAbs() {
-		return false, errorss.ErrNotAbsolute
-	}
-
-	// check if the scheme is neither http nor https
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return false, errorss.ErrWrongScheme
-	}
-
-	// if host is empty
-	if parsedURL.Host == "" {
-		return false, errorss.ErrEmptyHostName
-	}
-
-	// ensure host does not start with . or -
-	if strings.HasPrefix(parsedURL.Host, ".") || strings.HasPrefix(parsedURL.Host, "-") {
-		return false, fmt.Errorf("wrong host format %q", parsedURL.Host)
-	}
-
-	// Check that the host contains at least one dot (valid domain format) or is localhost
-	if !strings.Contains(parsedURL.Host, ".") && parsedURL.Host != "localhost" {
-		return false, errorss.ErrInvalidDomainFormat
-	}
-
-	return true, nil
 }
 
 // RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
