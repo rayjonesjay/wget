@@ -10,20 +10,20 @@ import (
 // Close the given closable reader or writer, ignoring any close errors that may arise.
 // This wrapper is essential in defer statements,
 // when we actually don't need to care whether the file was closed properly
-func Close(closable io.ReadWriteCloser) {
+func Close(closable io.Closer) {
 	_ = closable.Close()
 }
 
 // ShouldClose ensures the given reader or writer is closed properly, and that,
 // should any close errors arise, the error message should be printed to the error stream
-func ShouldClose(closable io.ReadWriteCloser) {
+func ShouldClose(closable io.Closer) {
 	MustClose(closable, nil)
 }
 
 // MustClose ensures the given reader or writer is closed properly, and that,
 // should any close errors arise the error message should be printed just before the given close error
 // handler function is called.
-func MustClose(closable io.ReadWriteCloser, handler func()) {
+func MustClose(closable io.Closer, handler func()) {
 	err := closable.Close()
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
