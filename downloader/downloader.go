@@ -1,5 +1,5 @@
-// Package types contains user defined types and constants
-package types
+// Package downloader contains user defined downloader and constants
+package downloader
 
 import (
 	"fmt"

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	"wget/args"
+	"wget/downloader"
 	"wget/help"
-	"wget/types"
 
 	"wget/errorss"
 	"wget/syscheck"
@@ -24,7 +24,7 @@ func main() {
 	}
 
 	arg := args.DownloadContext(arguments)
-	d := types.Arg{Context: &arg}
+	d := downloader.Arg{Context: &arg}
 
 	err := d.Download()
 	if err != nil {
