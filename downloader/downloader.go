@@ -62,6 +62,16 @@ var (
 	DefaultHTTPSPort = "443"
 )
 
+// Get downloads any files, website mirrors, or resources as defined by the provided download context
+func Get(c ctx.Context) {
+	a := Arg{Context: &c}
+	err := a.Get()
+	if err != nil {
+		// TODO: handle errors during downloads
+		panic(err)
+	}
+}
+
 // Download handles normal downloads based on the provided URLs and other flags in the Arg struct
 func (a *Arg) Download() error {
 
@@ -267,20 +277,15 @@ func (a *Arg) shouldExcludeDir(url string) bool {
 	return false
 }
 
-func (a *Arg) Run() {
+func (a *Arg) Get() (err error) {
 	if a.Mirror {
 		// run in mirror mode
-		_ = a.MirrorWeb()
-		//if err != nil {
-		//	return
-		//}
+		err = a.MirrorWeb()
 	} else {
 		// regular download
-		_ = a.Download()
-		//if err != nil {
-		//	return
-		//}
+		err = a.Download()
 	}
+	return
 }
 
 //func (a *Arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
