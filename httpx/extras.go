@@ -24,7 +24,9 @@ func ExtractMimeType(headers http.Header) string {
 	return mimeType
 }
 
-// ExtractContentLength extracts the Content-Length from HTTP response headers as an int.
+// ExtractContentLength extracts the Content-Length from HTTP response headers as
+// an int. Suppose, no `Content-Length` header exists in the response headers or
+// the value don't make sense as an integer, then, -1 is returned
 func ExtractContentLength(headers http.Header) int64 {
 	contentLengthStr := headers.Get("Content-Length")
 	if contentLengthStr == "" {
