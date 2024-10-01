@@ -1,4 +1,5 @@
-package fetch
+// Package limitedio creates a wrapper around io.Reader to limit the rate of reads from the reader
+package limitedio
 
 import (
 	"context"

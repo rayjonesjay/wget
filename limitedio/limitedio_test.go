@@ -1,4 +1,4 @@
-package fetch
+package limitedio
 
 import (
 	"context"
