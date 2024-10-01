@@ -157,6 +157,10 @@ func TestNewSGReader(t *testing.T) {
 	}
 }
 
+// TestSGReader_Read tests whether the SGReader limits reads on a string based io.Reader.
+// For this test, we set the max bandwidth to 1 byte/second, in which case we
+// expect that 5 bytes will be read at no earlier than 5 seconds, and that after
+// each second, the reader should have ideally read 1 more byte into our database buffer
 func TestSGReader_Read(t *testing.T) {
 	s := strings.Repeat("Hello", 1)
 	reader := NewStringReadCloser(s)
@@ -224,6 +228,7 @@ func TestSGReader_Read(t *testing.T) {
 	fmt.Println("[0] Sending start >>")
 	readStart <- struct{}{}
 	fmt.Println("[0]  Done.")
+	startTime := time.Now()
 	for {
 		fmt.Println("[0] Reading >>")
 		n, err := sgReader.Read(buffer)
@@ -235,13 +240,26 @@ func TestSGReader_Read(t *testing.T) {
 
 		database = append(database, buffer[:n]...)
 	}
+	endTime := time.Now()
 
 	cancel()
 	if string(database) != s {
 		t.Errorf("[0] expected database to be an exact copy of s -> \n%s, got \n%s", s, string(database))
 	}
+
+	// we expect that the 5 byte string (at a read rate of 1 byte/second)
+	//should have been read at no earlier than 5 seconds,
+	//but ideally no more than 6 seconds in the worst case
+	duration := endTime.Sub(startTime)
+	if duration < 5*time.Second {
+		t.Errorf("Reader read faster, took less than 5 seconds -> at %v second(s)", duration)
+	} else if duration > 6*time.Second {
+		t.Errorf("Reader read too slow, took extremely more than 5 seconds -> at %v second(s)", duration)
+	}
 }
 
+// checkPanic returns true if the given function, when called, caused a panic
+// call, along with the panic message, otherwise returns false
 func checkPanic(f func()) (panicked bool, message interface{}) {
 	defer func() {
 		if r := recover(); r != nil {
