@@ -115,7 +115,7 @@ func TestEvalArgs(t *testing.T) {
 
 	// Initialize arguments map for test cases
 	mappy := map[string][]string{
-		"Omega": {"--output", "file.txt"},
+		"Omega": {},
 		"Beta":  {"-O=file.txt", "-i=urls.txt", "-P=/home/Downloads"},
 		"Alpha": {"https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt"},
 	}
