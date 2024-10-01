@@ -14,38 +14,38 @@ import (
 // See https://golang.org/issues/8005#issuecomment-190753527 for details.
 type noCopy struct{}
 
-// waiters keeps track of whether there is Any reader waiting to read from the Channel, so we can write to it
+// waiters keeps track of whether there is some reader waiting to read from the channel, so we can write to it
 type waiters struct {
-	m   *sync.Mutex
-	Any bool
+	m    *sync.Mutex
+	some bool
 	// bidirectional channel to keep readers waiting for the next read allocation after the maximum reads for the
 	//current second have been depleted. The read allocator will replenish the reads every second
-	Channel chan struct{}
+	channel chan struct{}
 }
 
 // init properly initializes the target waiter, in place, with a new mutex and non-nil channel, overriding any values
 func (w *waiters) init() {
 	w.m = &sync.Mutex{}
-	w.Channel = make(chan struct{})
-	w.Any = false
+	w.channel = make(chan struct{})
+	w.some = false
 }
 
-// Receive registers a read waiter, who waits to read from the Channel, thus,
-// writers can write to the Channel; then, blocks until it receives some data from the Channel
+// Receive registers a read waiter, who waits to read from the channel, thus,
+// writers can write to the channel; then, blocks until it receives some data from the channel
 func (w *waiters) Receive() {
 	w.m.Lock()
-	w.Any = true
+	w.some = true
 	w.m.Unlock()
 
-	<-w.Channel
+	<-w.channel
 }
 
-// Send checks if there is Any reader waiting to read from the channel, before sending some data to the channel
+// Send checks if there is some reader waiting to read from the channel, before sending some data to the channel
 func (w *waiters) Send() {
 	w.m.Lock()
 	defer w.m.Unlock()
-	if w.Any {
-		w.Channel <- struct{}{}
+	if w.some {
+		w.channel <- struct{}{}
 	}
 }
 
