@@ -2,7 +2,6 @@ package fetch
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"math"
 	"sync"
@@ -113,14 +112,11 @@ func (r *SGReader) once() {
 
 	go func() {
 		// Create a ticker that ticks every second
-		println("[3] Creating ticker")
 		ticker := time.NewTicker(1 * time.Second)
 		// need to stop the timer,
 		//and cancel the go routine context when the underlying reader is just about to be closed
 		r.onClose = func() {
-			println("[3] Stopping ticker")
 			ticker.Stop()
-			println("[3] Cancelling context")
 			cancel()
 		}
 
@@ -136,7 +132,6 @@ func (r *SGReader) once() {
 				// tell readers that we have allocated some more bandwidth
 				r.waiters.Send()
 			case <-ctx.Done():
-				fmt.Println("[3] Ticker stopped by ctx cancel")
 				return
 			}
 		}
@@ -166,9 +161,7 @@ func (r *SGReader) Read(p []byte) (n int, err error) {
 	bytesToRead := min(int64(len(p)), r.reads.Load())
 	if len(p) != 0 && bytesToRead == 0 {
 		// There is no available read allocations, wait for the next round of allocation
-		fmt.Println("[2] no available read allocations, waiting for the next round of allocation")
 		r.waiters.Receive()
-		fmt.Println("[2] Done")
 		bytesToRead = min(int64(len(p)), r.reads.Load())
 	}
 
