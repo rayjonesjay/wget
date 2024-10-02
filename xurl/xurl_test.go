@@ -37,12 +37,17 @@ func TestIsValidURL(t *testing.T) {
 		// Invalid URLs
 		{
 			name: "Invalid URL without scheme",
-			args: args{url: "example.com"},
+			args: args{url: "//example.com/page"},
 			want: false,
 		},
 		{
 			name: "Invalid URL with invalid scheme",
 			args: args{url: "ftp://example.com"},
+			want: false,
+		},
+		{
+			name: "Invalid URL",
+			args: args{url: "example.com"},
 			want: false,
 		},
 		{
@@ -63,6 +68,11 @@ func TestIsValidURL(t *testing.T) {
 		{
 			name: "Invalid URL with leading hyphen in domain",
 			args: args{url: "https://-example.com"},
+			want: false,
+		},
+		{
+			name: "Missing hostname",
+			args: args{url: "https://"},
 			want: false,
 		},
 	}
