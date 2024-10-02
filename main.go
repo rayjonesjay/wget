@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
+
 	"wget/args"
 	"wget/downloader"
 	"wget/help"
@@ -12,7 +14,8 @@ import (
 )
 
 func main() {
-	if err := syscheck.CheckOperatingSystem(); err != nil {
+	operatingSys := runtime.GOOS
+	if err := syscheck.CheckOperatingSystem(operatingSys); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
 		return
