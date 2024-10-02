@@ -9,8 +9,9 @@ import (
 	"regexp"
 	"strings"
 	"wget/ctx"
-	"wget/errorss"
+	"wget/fileio"
 	"wget/help"
+	"wget/xerr"
 	"wget/xurl"
 )
 
@@ -20,7 +21,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 	for _, arg := range arguments {
 		switch {
 		case IsHelpFlag(arg):
-			errorss.WriteError(help.UsageMessage, 0, true)
+			xerr.WriteError(help.UsageMessage, 0, true)
 
 		case IsBackgroundFlag(arg):
 			Arguments.BackgroundMode = true
@@ -37,7 +38,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 				Arguments.InputFile = path
 				slice, err := ReadUrlFromFile(path)
 				if err != nil {
-					errorss.WriteError(err, 2, false)
+					xerr.WriteError(err, 2, false)
 				}
 				Arguments.Links = append(Arguments.Links, slice...)
 			}
@@ -75,7 +76,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		default:
 			isValid, err := xurl.IsValidURL(arg)
 			if err != nil {
-				errorss.WriteError(err, 1, true)
+				xerr.WriteError(err, 1, true)
 			}
 			if isValid {
 				Arguments.Links = append(Arguments.Links, arg)
@@ -91,13 +92,14 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fd.Close()
+	defer fileio.Close(fd)
+
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		link := strings.TrimSpace(scanner.Text())
 		ok, err := xurl.IsValidURL(link)
 		if err != nil {
-			errorss.WriteError(err, 1, true)
+			xerr.WriteError(err, 1, true)
 		}
 		if ok {
 			links = append(links, link)
@@ -153,7 +155,7 @@ func IsPathFlag(s string) (bool, string) {
 		return false, ""
 	}
 	if matches[1] == "." || matches[1] == ".." {
-		errorss.WriteError(fmt.Sprintf("%v %s\n", errorss.ErrWrongPath, matches[1]), 1, true)
+		xerr.WriteError(fmt.Sprintf("%v %s\n", xerr.ErrWrongPath, matches[1]), 1, true)
 	}
 	return true, matches[1]
 }

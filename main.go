@@ -7,8 +7,8 @@ import (
 	"wget/downloader"
 	"wget/help"
 
-	"wget/errorss"
 	"wget/syscheck"
+	"wget/xerr"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	arguments := os.Args[1:]
 	if len(arguments) == 0 {
 		// no arguments were passed, so return
-		errorss.WriteError(help.UsageMessage, 1, true)
+		xerr.WriteError(help.UsageMessage, 1, true)
 		return
 	}
 

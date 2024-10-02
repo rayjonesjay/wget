@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 	"wget/ctx"
-	"wget/errorss"
+	"wget/xerr"
 )
 
 // arg represents the commandline arguments passed through the command line by the user
@@ -82,7 +82,7 @@ func (a *arg) Download() error {
 			defer wg.Done()
 			err := a.GetResource(url)
 			if err != nil {
-				errorss.WriteError(err, 2, false)
+				xerr.WriteError(err, 2, false)
 			}
 		}()
 	}
@@ -133,7 +133,7 @@ func (a *arg) GetResource(url string) (err error) {
 	fmt.Print("\rsending request, awaiting response...")
 	resp, err := client.Get(url)
 	if err != nil {
-		errorss.WriteError(err, 2, false)
+		xerr.WriteError(err, 2, false)
 	}
 
 	fmt.Printf("\rsending request, awaiting response... %d %s\n", resp.StatusCode, http.StatusText(resp.StatusCode))

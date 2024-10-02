@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"wget/errorss"
+	"wget/xerr"
 )
 
 // IsValidURL checks if the given string is a valid URL
@@ -18,17 +18,17 @@ func IsValidURL(rawUrl string) (bool, error) {
 
 	// check if scheme component of the URL is empty
 	if !parsedURL.IsAbs() {
-		return false, errorss.ErrNotAbsolute
+		return false, xerr.ErrNotAbsolute
 	}
 
 	// check if the scheme is neither http nor https
 	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return false, errorss.ErrWrongScheme
+		return false, xerr.ErrWrongScheme
 	}
 
 	// if host is empty
 	if parsedURL.Host == "" {
-		return false, errorss.ErrEmptyHostName
+		return false, xerr.ErrEmptyHostName
 	}
 
 	// ensure host does not start with . or -
@@ -38,7 +38,7 @@ func IsValidURL(rawUrl string) (bool, error) {
 
 	// Check that the host contains at least one dot (valid domain format) or is localhost
 	if !strings.Contains(parsedURL.Host, ".") && parsedURL.Host != "localhost" {
-		return false, errorss.ErrInvalidDomainFormat
+		return false, xerr.ErrInvalidDomainFormat
 	}
 
 	return true, nil
