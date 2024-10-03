@@ -119,6 +119,15 @@ body {
 		},
 
 		{
+			name: "Nil transformer",
+			args: args{
+				_css:        `@import url("styles.css");`,
+				transformer: nil,
+			},
+			want: `@import url("styles.css");`,
+		},
+
+		{
 			name: "Simple @import",
 			args: args{
 				_css:        `@import url("styles.css");`,

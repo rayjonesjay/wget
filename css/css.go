@@ -10,7 +10,7 @@ import (
 
 // TransformCssUrl parses the given CSS, checking for calls to the CSS url() functions,
 // then modifying the url link defined in the url() function according to the defined transformer.
-// returns the transformed CSS string
+// returns the transformed CSS string. Does nothing if the transformer function is nil
 func TransformCssUrl(cssStr string, transformer func(url string) string) string {
 	if transformer == nil {
 		return cssStr
