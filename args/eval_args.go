@@ -59,6 +59,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		case strings.HasPrefix(arg, "--rate-limit="):
 			Arguments.RateLimit = strings.TrimPrefix(arg, "--rate-limit=")
 			Arguments.RateLimitValue = toBytes(Arguments.RateLimit)
+			fmt.Println(Arguments.RateLimitValue)
 
 		case strings.HasPrefix(arg, "-R="):
 			rejects := strings.Split(strings.TrimPrefix(arg, "-R="), ",")
@@ -96,6 +97,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 func toBytes(rateLimit string) (rateLimitBytes int64) {
 	// 1k == 1000 bytes
 	// 1M == 1_000_000 bytes
+
 	index := func(rateLimit []rune) int {
 		for i := len(rateLimit) - 1; i >= 0; i-- {
 			ch := rateLimit[i]
@@ -106,20 +108,22 @@ func toBytes(rateLimit string) (rateLimitBytes int64) {
 		return -1
 	}
 	indx := index([]rune(rateLimit))
-	size, suffix := rateLimit[:indx+1], rateLimit[indx:]
-	if suffix != "M" && suffix != "k" {
-		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
-		return 0
-	}
+	size, suffix := rateLimit[:indx+1], rateLimit[indx+1:]
+
 	sizeN, err := strconv.Atoi(size)
 	if err != nil {
 		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
 		return 0
 	}
+
+	fmt.Println(suffix, sizeN)
 	if suffix == "k" {
 		return int64(sizeN * 1000)
 	} else if suffix == "M" {
-		return int64(sizeN * 1000)
+		return int64(sizeN * 1000000)
+	} else if suffix != "M" && suffix != "k" {
+		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
+		return 0
 	}
 	return int64(sizeN)
 }
