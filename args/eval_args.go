@@ -10,18 +10,20 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-	"wget/errorss"
+	"wget/ctx"
+	"wget/fileio"
 	"wget/help"
-	"wget/types"
+	"wget/xerr"
+	"wget/xurl"
 )
 
-// EvalArgs takes a slice of strings parsed at the command line and adds them to types.Arg
-// as field values and returns types.Arg
-func EvalArgs(arguments []string) (Arguments types.Arg) {
+// DownloadContext builds and returns the download context,
+// as defined by (parsing and evaluating) the commandline arguments.
+func DownloadContext(arguments []string) (Arguments ctx.Context) {
 	for _, arg := range arguments {
 		switch {
 		case IsHelpFlag(arg):
-			errorss.WriteError(help.UsageMessage, 0, true)
+			xerr.WriteError(help.UsageMessage, 0, true)
 
 		case IsBackgroundFlag(arg):
 			Arguments.BackgroundMode = true
@@ -38,7 +40,7 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 				Arguments.InputFile = path
 				slice, err := ReadUrlFromFile(path)
 				if err != nil {
-					errorss.WriteError(err, 2, false)
+					xerr.WriteError(err, 2, false)
 				}
 				Arguments.Links = append(Arguments.Links, slice...)
 			}
@@ -75,9 +77,9 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		default:
-			isValid, err := types.IsValidURL(arg)
+			isValid, err := xurl.IsValidURL(arg)
 			if err != nil {
-				errorss.WriteError(err, 1, true)
+				xerr.WriteError(err, 1, true)
 			}
 			if isValid {
 				Arguments.Links = append(Arguments.Links, arg)
@@ -94,7 +96,6 @@ func EvalArgs(arguments []string) (Arguments types.Arg) {
 func toBytes(rateLimit string) (rateLimitBytes int64) {
 	// 1k == 1000 bytes
 	// 1M == 1_000_000 bytes
-
 	index := func(rateLimit []rune) int {
 		for i := len(rateLimit) - 1; i >= 0; i-- {
 			ch := rateLimit[i]
@@ -115,7 +116,6 @@ func toBytes(rateLimit string) (rateLimitBytes int64) {
 		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
 		return 0
 	}
-
 	if suffix == "k" {
 		return int64(sizeN * 1000)
 	} else if suffix == "M" {
@@ -130,13 +130,14 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fd.Close()
+	defer fileio.Close(fd)
+
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		link := strings.TrimSpace(scanner.Text())
-		ok, err := types.IsValidURL(link)
+		ok, err := xurl.IsValidURL(link)
 		if err != nil {
-			errorss.WriteError(err, 1, true)
+			xerr.WriteError(err, 1, true)
 		}
 		if ok {
 			links = append(links, link)
@@ -150,7 +151,9 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 func IsOutputFlag(arg string) (bool, string) {
 	if strings.HasPrefix(arg, "-O=") {
 		filename := strings.TrimSpace(strings.TrimPrefix(arg, "-O="))
-		if filename == "" || filename == "-" || filename == ".." || filename == "." || strings.HasPrefix(filename, "/") {
+		if filename == "" || filename == "-" || filename == ".." || filename == "." || strings.HasPrefix(
+			filename, "/",
+		) {
 			return false, ""
 		} else {
 			return true, filename
@@ -190,7 +193,7 @@ func IsPathFlag(s string) (bool, string) {
 		return false, ""
 	}
 	if matches[1] == "." || matches[1] == ".." {
-		errorss.WriteError(fmt.Sprintf("%v %s\n", errorss.ErrWrongPath, matches[1]), 1, true)
+		xerr.WriteError(fmt.Sprintf("%v %s\n", xerr.ErrWrongPath, matches[1]), 1, true)
 	}
 	return true, matches[1]
 }

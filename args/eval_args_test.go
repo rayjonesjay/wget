@@ -3,7 +3,7 @@ package args
 import (
 	"reflect"
 	"testing"
-	"wget/types"
+	"wget/ctx"
 )
 
 // TestIsHelpFlag is a test function for the IsHelpFlag function
@@ -22,11 +22,13 @@ func TestIsHelpFlag(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsHelpFlag(tt.input); got != tt.want {
-				t.Errorf("IsHelpFlag() = %v, want %v", got, tt.want)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				if got := IsHelpFlag(tt.input); got != tt.want {
+					t.Errorf("IsHelpFlag() = %v, want %v", got, tt.want)
+				}
+			},
+		)
 	}
 }
 
@@ -44,12 +46,14 @@ func TestIsPathFlag(t *testing.T) {
 		{"test4", "-P=...", true, "..."},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got1, got2 := IsPathFlag(tt.input)
-			if got1 != tt.want1 || got2 != tt.want2 {
-				t.Errorf("IsPathFlag() = [%v %v], want [%v %v]", got1, got2, tt.want1, tt.want2)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				got1, got2 := IsPathFlag(tt.input)
+				if got1 != tt.want1 || got2 != tt.want2 {
+					t.Errorf("IsPathFlag() = [%v %v], want [%v %v]", got1, got2, tt.want1, tt.want2)
+				}
+			},
+		)
 	}
 }
 
@@ -71,12 +75,14 @@ func TestInputFile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got1, got2 := InputFile(tt.input)
-			if got1 != tt.want1 || got2 != tt.want2 {
-				t.Errorf("InputFile() = [%v %v] , want [%v %v]", got1, got2, tt.want1, tt.want2)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				got1, got2 := InputFile(tt.input)
+				if got1 != tt.want1 || got2 != tt.want2 {
+					t.Errorf("InputFile() = [%v %v] , want [%v %v]", got1, got2, tt.want1, tt.want2)
+				}
+			},
+		)
 	}
 }
 
@@ -99,12 +105,14 @@ func TestIsOutputFlag(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got1, got2 := IsOutputFlag(tt.input)
-			if got1 != tt.want1 || got2 != tt.want2 {
-				t.Errorf("IsOutputFlag() = got [%v %v], want [%v %v]", got1, got2, tt.want1, tt.want2)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				got1, got2 := IsOutputFlag(tt.input)
+				if got1 != tt.want1 || got2 != tt.want2 {
+					t.Errorf("IsOutputFlag() = got [%v %v], want [%v %v]", got1, got2, tt.want1, tt.want2)
+				}
+			},
+		)
 	}
 }
 
@@ -123,22 +131,37 @@ func TestEvalArgs(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          args
-		wantArguments types.Arg
+		wantArguments ctx.Context
 	}{
 		// when no arguments have been parsed
-		{"Omega", args{arguments: mappy["Omega"]}, types.Arg{}},
+		{"Omega", args{arguments: mappy["Omega"]}, ctx.Context{}},
 
-		{"Beta", args{arguments: mappy["Beta"]}, types.Arg{OutputFile: "file.txt", InputFile: "urls.txt", SavePath: "/home/Downloads"}},
+		{
+			"Beta", args{arguments: mappy["Beta"]},
+			ctx.Context{OutputFile: "file.txt", InputFile: "urls.txt", SavePath: "/home/Downloads"},
+		},
 
-		{name: "Alpha", args: args{arguments: mappy["Alpha"]}, wantArguments: types.Arg{Links: []string{"https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt"}}},
+		{
+			name: "Alpha", args: args{arguments: mappy["Alpha"]},
+			wantArguments: ctx.Context{
+				Links: []string{
+					"https://learn.zone01kisumu.ke" +
+						"/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if gotArguments := EvalArgs(tt.args.arguments); !reflect.DeepEqual(gotArguments, tt.wantArguments) {
-				s := "-------------------------------------------------------------"
-				t.Errorf("EvalArgs() %s \ngot %v\nwant %v \n%s", s, gotArguments, tt.wantArguments, s)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				if gotArguments := DownloadContext(tt.args.arguments); !reflect.DeepEqual(
+					gotArguments, tt.wantArguments,
+				) {
+					s := "-------------------------------------------------------------"
+					t.Errorf("DownloadContext() %s \ngot %v\nwant %v \n%s", s, gotArguments, tt.wantArguments, s)
+				}
+			},
+		)
 	}
 }

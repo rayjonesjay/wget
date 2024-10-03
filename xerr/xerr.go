@@ -1,5 +1,5 @@
-// Package errorss errors package contains all error types, error messages and functions for handing errors
-package errorss
+// Package xerr defines common error types, error messages and functions for handing errors
+package xerr
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// all error types are defined here and their respective messages, because repetition is boring
+// common error types are defined here with their respective messages
 var (
 	// ErrWrongScheme use when url scheme is not http or https
 	ErrWrongScheme = errors.New("wrong url scheme")
@@ -21,6 +21,7 @@ var (
 	// ErrInvalidDomainFormat use when domain format is invalid
 	ErrInvalidDomainFormat = errors.New("invalid domain format")
 
+	// ErrWrongPath is returned when a given path isn't a valid location in the filesystem
 	ErrWrongPath = errors.New("invalid path")
 )
 

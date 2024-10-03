@@ -1,5 +1,5 @@
-// Package types contains user defined types and constants
-package types
+// Package downloader contains user defined downloader and constants
+package downloader
 
 import (
 	"fmt"
@@ -12,8 +12,18 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"wget/errorss"
+	"wget/ctx"
+	"wget/xerr"
 )
+
+// arg represents the commandline arguments passed through the command line by the user
+// example: $ go run . -O=file.txt -B https://www.example.com
+// -0 will be a field in arg that specifies the output file to save the resource
+// -B will send the download process to background mode
+// https://www.example.com is the link to where the resource resides
+type arg struct {
+	*ctx.Context
+}
 
 const (
 	// KB Size of Data in KiloBytes
@@ -52,28 +62,18 @@ var (
 	DefaultHTTPSPort = "443"
 )
 
-// Arg represents the commandline arguments passed through the command line by the user
-// example: $ go run . -O=file.txt -B https://www.example.com
-// -0 will be a field in Arg that specifies the output file to save the resource
-// -B will send the download process to background mode
-// https://www.example.com is the link to where the resource resides
-type Arg struct {
-	OutputFile     string   // identified by the -O flag
-	BackgroundMode bool     // identified by the -B flag
-	Links          []string // identified by the regexp pattern (http|https)://\w+ ,specifies path to resources on the web
-	SavePath       string   // identified by the -P flag, specifies the location where to save the resource
-	InputFile      string   // identified by the -i flag, specifies a file contains url(s)
-	Rejects        []string // identified by the -R or --reject flag contains a list of resources to reject
-	Mirror         bool     // identified by the --mirror flag, indicates whether to download an entire website or not
-	RateLimit      string   // identified by the --rate-limit flag, specifies the download speed when fetching a resource
-	RateLimitValue int64    // if RateLimit is specified, RateLimitValue will be
-	IsHelp         bool     // identified by the --help flag, if pared it will print our program manual
-	ConvertLinks   bool     // identified by the --convert-links
-	Exclude        []string // identified by the --exclude or -X, takes a comma separated list of paths(directory) to avoid when fetching a resource
+// Get downloads any files, website mirrors, or resources as defined by the provided download context
+func Get(c ctx.Context) {
+	a := arg{Context: &c}
+	err := a.Get()
+	if err != nil {
+		// TODO: handle errors during downloads
+		panic(err)
+	}
 }
 
-// Download handles normal downloads based on the provided URLs and other flags in the Arg struct
-func (a *Arg) Download() error {
+// Download handles normal downloads based on the provided URLs and other flags in the arg struct
+func (a *arg) Download() error {
 
 	var wg sync.WaitGroup
 	for _, url := range a.Links {
@@ -82,7 +82,7 @@ func (a *Arg) Download() error {
 			defer wg.Done()
 			err := a.GetResource(url)
 			if err != nil {
-				errorss.WriteError(err, 2, false)
+				xerr.WriteError(err, 2, false)
 			}
 		}()
 	}
@@ -114,7 +114,7 @@ func CheckIfFileExists(fname string) string {
 }
 
 // GetResource takes an url to a resource and attempts to fetch the specified resource, if an error occurs err is returned
-func (a *Arg) GetResource(url string) (err error) {
+func (a *arg) GetResource(url string) (err error) {
 	outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
 	// open the output file for writing, create if it does not exist, truncate if it does exist.
 	outFile, err := os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE, 0644)
@@ -133,7 +133,7 @@ func (a *Arg) GetResource(url string) (err error) {
 	fmt.Print("\rsending request, awaiting response...")
 	resp, err := client.Get(url)
 	if err != nil {
-		errorss.WriteError(err, 2, false)
+		xerr.WriteError(err, 2, false)
 	}
 
 	fmt.Printf("\rsending request, awaiting response... %d %s\n", resp.StatusCode, http.StatusText(resp.StatusCode))
@@ -168,7 +168,7 @@ Downloaded [https://pbs.twimg.com/media/EMtmPFLWkAA8CIS.jpg]
 finished at 2017-10-14 03:46:07
 */
 // determineOutputPath determines the full path for the output file
-func (a *Arg) determineOutputPath(url string) string {
+func (a *arg) determineOutputPath(url string) string {
 	var outputFilePath string
 
 	if a.OutputFile != "" {
@@ -202,7 +202,7 @@ func printUrls(urls []string) {
 
 // IsEmpty function checks whether an iterable is empty, an iterable is a string,array or slice.
 // it returns true if the `data` which is expected to be an iterable, is empty else return false
-func (a *Arg) IsEmpty(data interface{}) bool {
+func (a *arg) IsEmpty(data interface{}) bool {
 
 	// get the value of the interface
 	val := reflect.ValueOf(data)
@@ -225,7 +225,7 @@ func (a *Arg) IsEmpty(data interface{}) bool {
 	}
 }
 
-func (a *Arg) MirrorWeb() error {
+func (a *arg) MirrorWeb() error {
 
 	for _, link := range a.Links {
 		parsedUrl, err := url.Parse(link)
@@ -251,14 +251,14 @@ func (a *Arg) MirrorWeb() error {
 	return nil
 }
 
-//func (a *Arg) downloadAndParseHTML(link, saveDir) error {
+//func (a *arg) downloadAndParseHTML(link, saveDir) error {
 //	{
 //	}
 //}
 
 // rejectFileBasedOnExtension method checks if a file should be downloaded based on
 // its file extension
-func (a *Arg) rejectFileBasedOnExtension(url string) bool {
+func (a *arg) rejectFileBasedOnExtension(url string) bool {
 	for _, ext := range a.Rejects {
 		if strings.HasSuffix(url, ext) {
 			return true
@@ -268,7 +268,7 @@ func (a *Arg) rejectFileBasedOnExtension(url string) bool {
 }
 
 // shouldExcludeDir method checks if an url belongs to an excluded directory
-func (a *Arg) shouldExcludeDir(url string) bool {
+func (a *arg) shouldExcludeDir(url string) bool {
 	for _, directory := range a.Exclude {
 		if strings.Contains(url, directory) {
 			return true
@@ -277,23 +277,18 @@ func (a *Arg) shouldExcludeDir(url string) bool {
 	return false
 }
 
-func (a *Arg) Run() {
+func (a *arg) Get() (err error) {
 	if a.Mirror {
 		// run in mirror mode
-		_ = a.MirrorWeb()
-		//if err != nil {
-		//	return
-		//}
+		err = a.MirrorWeb()
 	} else {
 		// regular download
-		_ = a.Download()
-		//if err != nil {
-		//	return
-		//}
+		err = a.Download()
 	}
+	return
 }
 
-//func (a *Arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
+//func (a *arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
 //	// replace href/src urls with local file paths
 //	// example: href="http://example.com/style.css" -> href="./style.css"
 //	return htmlCOncent
@@ -312,41 +307,6 @@ func GetCurrentTime(isStart bool) string {
 		return fmt.Sprintf("start at %s", formattedTime)
 	}
 	return fmt.Sprintf("finished at %s", formattedTime)
-}
-
-// IsValidURL checks if the given string is a valid URL
-func IsValidURL(urlStr string) (bool, error) {
-	parsedURL, err := url.ParseRequestURI(urlStr)
-	if err != nil {
-		return false, fmt.Errorf("invalid URL: %v", err)
-	}
-
-	// check if scheme component of the URL is empty
-	if !parsedURL.IsAbs() {
-		return false, errorss.ErrNotAbsolute
-	}
-
-	// check if the scheme is neither http nor https
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return false, errorss.ErrWrongScheme
-	}
-
-	// if host is empty
-	if parsedURL.Host == "" {
-		return false, errorss.ErrEmptyHostName
-	}
-
-	// ensure host does not start with . or -
-	if strings.HasPrefix(parsedURL.Host, ".") || strings.HasPrefix(parsedURL.Host, "-") {
-		return false, fmt.Errorf("wrong host format %q", parsedURL.Host)
-	}
-
-	// Check that the host contains at least one dot (valid domain format) or is localhost
-	if !strings.Contains(parsedURL.Host, ".") && parsedURL.Host != "localhost" {
-		return false, errorss.ErrInvalidDomainFormat
-	}
-
-	return true, nil
 }
 
 // RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
