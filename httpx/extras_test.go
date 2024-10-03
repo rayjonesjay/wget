@@ -125,3 +125,91 @@ func TestExtractContentLength(t *testing.T) {
 		)
 	}
 }
+
+func TestFilenameFromContentDisposition(t *testing.T) {
+	type args struct {
+		headers http.Header
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "Valid filename with quotes",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; filename=\"my_document.pdf\""}}},
+			want:    "my_document.pdf",
+			wantErr: false,
+		},
+		{
+			name:    "Valid filename without quotes",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; filename=my_document.pdf"}}},
+			want:    "my_document.pdf",
+			wantErr: false,
+		},
+		{
+			name:    "Filename with spaces",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; filename=\" document with spaces.pdf \""}}},
+			want:    " document with spaces.pdf ",
+			wantErr: false,
+		},
+		{
+			name:    "Directive filename surrounded with spaces",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; filename = \" document with spaces.pdf \" "}}},
+			want:    " document with spaces.pdf ",
+			wantErr: false,
+		},
+		{
+			name:    "Case-insensitive filename parameter",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; FILENAME=\"my_document.pdf\""}}},
+			want:    "my_document.pdf",
+			wantErr: false,
+		},
+		{
+			name:    "No filename parameter",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment"}}},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Empty Content-Disposition header",
+			args:    args{headers: http.Header{}},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Invalid filename format (no equals sign)",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; filename"}}},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Filename with special characters",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; filename=\"file-with_special-chars!.pdf\""}}},
+			want:    "file-with_special-chars!.pdf",
+			wantErr: false,
+		},
+		{
+			name:    "Filename with Unicode characters",
+			args:    args{headers: http.Header{"Content-Disposition": []string{"attachment; filename=\"文件.pdf\""}}},
+			want:    "文件.pdf",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				got, err := FilenameFromContentDisposition(tt.args.headers)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("FilenameFromContentDisposition() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				if got != tt.want {
+					t.Errorf("FilenameFromContentDisposition() got = %v, want %v", got, tt.want)
+				}
+			},
+		)
+	}
+}
