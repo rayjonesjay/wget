@@ -19,6 +19,11 @@ func TestIsValidURL(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "Valid URL",
+			args: args{url: "example.com"},
+			want: true,
+		},
+		{
 			name: "Valid HTTPS URL",
 			args: args{url: "https://example.com"},
 			want: true,
@@ -41,13 +46,13 @@ func TestIsValidURL(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "Invalid URL with invalid scheme",
-			args: args{url: "ftp://example.com"},
+			name: "Missing scheme but space in url",
+			args: args{url: "example .com"},
 			want: false,
 		},
 		{
-			name: "Invalid URL",
-			args: args{url: "example.com"},
+			name: "Invalid URL with invalid scheme",
+			args: args{url: "ftp://example.com"},
 			want: false,
 		},
 		{
