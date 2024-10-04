@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
 	"wget/xerr"
 )
 
@@ -13,7 +14,10 @@ import (
 func IsValidURL(rawUrl string) (bool, error) {
 	parsedURL, err := url.ParseRequestURI(rawUrl)
 	if err != nil {
-		return false, fmt.Errorf("invalid URL: %v", err)
+		parsedURL, err = url.ParseRequestURI("https://" + rawUrl)
+		if err != nil {
+			return false, fmt.Errorf("invalid URL: %v", err)
+		}
 	}
 
 	// check if scheme component of the URL is empty
