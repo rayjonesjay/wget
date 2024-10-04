@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
+	"unicode"
 	"wget/ctx"
 	"wget/fileio"
 	"wget/help"
@@ -56,6 +58,8 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 		case strings.HasPrefix(arg, "--rate-limit="):
 			Arguments.RateLimit = strings.TrimPrefix(arg, "--rate-limit=")
+			Arguments.RateLimitValue = toBytes(Arguments.RateLimit)
+			fmt.Println(Arguments.RateLimitValue)
 
 		case strings.HasPrefix(arg, "-R="):
 			rejects := strings.Split(strings.TrimPrefix(arg, "-R="), ",")
@@ -84,6 +88,44 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		}
 	}
 	return
+}
+
+// toBytes converts a rateLimit in string format to bytes, if no suffix is supplied then the value is considered in bytes
+// the only suffixes allowed are (k == kilobytes) and (M == megabytes)
+// example when user passes: 20k toBytes returns 20000
+// example when user passes: 20M toBytes returns 20000000
+func toBytes(rateLimit string) (rateLimitBytes int64) {
+	// 1k == 1000 bytes
+	// 1M == 1_000_000 bytes
+
+	index := func(rateLimit []rune) int {
+		for i := len(rateLimit) - 1; i >= 0; i-- {
+			ch := rateLimit[i]
+			if unicode.IsDigit(ch) {
+				return i
+			}
+		}
+		return -1
+	}
+	indx := index([]rune(rateLimit))
+	size, suffix := rateLimit[:indx+1], rateLimit[indx+1:]
+
+	sizeN, err := strconv.Atoi(size)
+	if err != nil {
+		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
+		return 0
+	}
+
+	fmt.Println(suffix, sizeN)
+	if suffix == "k" {
+		return int64(sizeN * 1000)
+	} else if suffix == "M" {
+		return int64(sizeN * 1000000)
+	} else if suffix != "M" && suffix != "k" {
+		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
+		return 0
+	}
+	return int64(sizeN)
 }
 
 // ReadUrlFromFile opens fpath to read the contents of the file (urls) and returns a slice of the urls
