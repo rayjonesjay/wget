@@ -2,12 +2,14 @@
 package mirror
 
 import (
+	"errors"
 	"fmt"
 	"golang.org/x/net/html"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
+	"wget/convertlinks"
 	"wget/ctx"
 	"wget/fetch"
 	"wget/fileio"
@@ -47,6 +49,8 @@ type arg struct {
 	mutex *sync.Mutex
 }
 
+var ErrFileAlreadyDownloaded = errors.New("file already downloaded")
+
 // Site downloads the entire website being possible to use "part" of the website offline.
 // If no scheme is detected in the mirror URL, then, the HTTP scheme is assumed
 func Site(cxt ctx.Context, mirrorUrl string) error {
@@ -66,7 +70,8 @@ func Site(cxt ctx.Context, mirrorUrl string) error {
 		parse.Scheme = "http"
 	}
 
-	return m.Site(parse.String())
+	_, err = m.Site(parse.String())
+	return err
 }
 
 // GetFile returns a writable file, where the downloaded file will be written into,
@@ -99,19 +104,19 @@ func (a *arg) GetFile(downloadUrl string, header http.Header) (*os.File, error) 
 // Site downloads the entire website being possible to use "part" of the website offline,
 // respecting the download context defined by the given instance.
 // If no scheme is detected in the mirror URL, then, the HTTP scheme is assumed
-func (a *arg) Site(mirrorUrl string) error {
+func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	{ // check if the given URL has already been downloaded by this instance
 		a.mutex.Lock()
 		if _, ok := a.downloaded[mirrorUrl]; ok {
 			// skip, already downloaded or in the download queue
-			return nil
+			return info, ErrFileAlreadyDownloaded
 		}
 		a.downloaded[mirrorUrl] = true
 		a.mutex.Unlock()
 	}
 
 	// TODO add progress and rate listeners
-	info, err := fetch.URL(
+	info, err = fetch.URL(
 		mirrorUrl,
 		fetch.Config{
 			GetFile:          a.GetFile,
@@ -123,46 +128,47 @@ func (a *arg) Site(mirrorUrl string) error {
 		},
 	)
 	if err != nil {
-		return err
+		return
 	}
 
 	contentType := httpx.ExtractMimeType(info.Headers)
 	// TODO: parse other web formats as CSS
 	if contentType != "text/html" {
 		// Not a html file, done downloading
-		return nil
+		return
 	}
 
 	// the downloaded file is HTML; attempt to extract linked contents and pages
 	htmlFile, err := os.Open(info.Name)
 	if err != nil {
-		return err
+		return
 	}
 	defer fileio.Close(htmlFile)
 
 	doc, err := html.Parse(htmlFile)
 	if err != nil {
-		return err
+		return
 	}
 
 	links := Extract(doc)
 	fmt.Printf("Found links: %v\n", links)
 	if len(links) == 0 {
 		// No more links to download
-		return nil
+		return
 	}
 
-	// Add a link to the site icon, /favicon.ico, most clients love it
-	{
-		faviconUrl, err := AbsoluteUrl(mirrorUrl, "/favicon.ico")
+	// Add a link to the site icon, /favicon.ico (most clients love it),
+	//and to the /robots.txt file (wget downloads this file in mirror mode)
+	for _, relUrl := range []string{"/robots.txt", "/favicon.ico"} {
+		faviconUrl, err := AbsoluteUrl(mirrorUrl, relUrl)
 		if err != nil {
-			return err
+			return info, err
 		}
 		links = append(links, UrlExtract{Url: faviconUrl})
 	}
 
-	// Download each link
-	wg := sync.WaitGroup{}
+	convertUrls := make(map[string]string)
+	// Download each link, synchronously, continuing to the next regardless of errors
 	for _, link := range links {
 		mUrl, err := AbsoluteUrl(mirrorUrl, link.Url)
 		if err != nil {
@@ -170,23 +176,65 @@ func (a *arg) Site(mirrorUrl string) error {
 			continue
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err := a.Site(mUrl)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}()
-	}
-
-	wg.Wait()
-	if a.ConvertLinks {
-		err := html.Render(htmlFile, doc)
+		linkInfo, err := a.Site(mUrl)
 		if err != nil {
-			return err
+			fmt.Println(err)
+		} else {
+			fmt.Printf("saved to -> %v\n", linkInfo)
+			convertUrls[link.Url] = RelativeFolder(info.Name, linkInfo.Name)
 		}
 	}
 
-	return nil
+	// TODO: remove tester assignment
+	a.ConvertLinks = true
+	for a.ConvertLinks {
+		linkConverter := func(url string, isA bool) string {
+			if toUrl, ok := convertUrls[url]; ok {
+				return toUrl
+			}
+			return url
+		}
+		convertlinks.OfHtml(doc, linkConverter)
+
+		// Write the new doc `html.Node` to a new temporary file
+		convertHtmlFile, err := createTempFile()
+		if err != nil {
+			break
+		}
+		defer fileio.Close(convertHtmlFile)
+
+		err = html.Render(convertHtmlFile, doc)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
+		// successfully converted the links, and wrote the HTML node to the new temporary file,
+		// move the temporary file to the actual downloaded HTML file
+		fileio.Close(htmlFile)
+		err = os.Rename(convertHtmlFile.Name(), htmlFile.Name())
+		if err != nil {
+			break
+		}
+
+		break
+	}
+
+	return
+}
+
+func createTempFile() (*os.File, error) {
+	dir := os.TempDir() + "com.zone01.wget"
+	err := os.MkdirAll(dir, 0775)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a temporary file inside the directory
+	tempFile, err := os.CreateTemp(dir, "*.tmp")
+	if err != nil {
+		return nil, err
+	}
+
+	return tempFile, nil
 }
