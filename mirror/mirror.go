@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 	"wget/convertlinks"
 	"wget/ctx"
@@ -105,6 +106,8 @@ func (a *arg) GetFile(downloadUrl string, header http.Header) (*os.File, error) 
 // respecting the download context defined by the given instance.
 // If no scheme is detected in the mirror URL, then, the HTTP scheme is assumed
 func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
+	fmt.Printf("Fetching >> %q\n", mirrorUrl)
+	defer fmt.Printf("[1] Done\n")
 	{ // check if the given URL has already been downloaded by this instance
 		a.mutex.Lock()
 		if _, ok := a.downloaded[mirrorUrl]; ok {
@@ -119,12 +122,13 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	info, err = fetch.URL(
 		mirrorUrl,
 		fetch.Config{
-			GetFile:          a.GetFile,
-			Limit:            int32(a.RateLimitValue),
-			ProgressListener: nil,
-			RateListener:     nil,
-			Body:             nil,
-			Method:           "GET",
+			GetFile:            a.GetFile,
+			Limit:              int32(a.RateLimitValue),
+			ProgressListener:   nil,
+			RateListener:       nil,
+			Body:               nil,
+			Method:             "GET",
+			AllowedStatusCodes: []int{http.StatusOK},
 		},
 	)
 	if err != nil {
@@ -180,14 +184,14 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Printf("saved to -> %v\n", linkInfo)
-			convertUrls[link.Url] = RelativeFolder(info.Name, linkInfo.Name)
+			fmt.Printf("saved to -> %s\n", linkInfo.Name)
+			fmt.Printf("parent: %s -> relative: %s\n", info.Name, linkInfo.Name)
+			convertUrls[link.Url], _ = RelativePath(info.Name, linkInfo.Name)
 		}
 	}
 
-	// TODO: remove tester assignment
-	a.ConvertLinks = true
-	for a.ConvertLinks {
+	fmt.Printf("Converter Map >> %v\n", convertUrls)
+	convertLinks := func() {
 		linkConverter := func(url string, isA bool) string {
 			if toUrl, ok := convertUrls[url]; ok {
 				return toUrl
@@ -199,14 +203,14 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		// Write the new doc `html.Node` to a new temporary file
 		convertHtmlFile, err := createTempFile()
 		if err != nil {
-			break
+			return
 		}
 		defer fileio.Close(convertHtmlFile)
 
 		err = html.Render(convertHtmlFile, doc)
 		if err != nil {
 			fmt.Println(err)
-			break
+			return
 		}
 
 		// successfully converted the links, and wrote the HTML node to the new temporary file,
@@ -214,27 +218,56 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		fileio.Close(htmlFile)
 		err = os.Rename(convertHtmlFile.Name(), htmlFile.Name())
 		if err != nil {
-			break
+			fmt.Println(err)
+			return
 		}
+	}
 
-		break
+	if a.ConvertLinks {
+		convertLinks()
 	}
 
 	return
 }
 
 func createTempFile() (*os.File, error) {
-	dir := os.TempDir() + "com.zone01.wget"
+	dir := os.TempDir() + "/com.zone01.wget"
 	err := os.MkdirAll(dir, 0775)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a temporary file inside the directory
-	tempFile, err := os.CreateTemp(dir, "*.tmp")
+	tempFile, err := os.CreateTemp(dir, "*.wget.tmp")
 	if err != nil {
 		return nil, err
 	}
 
 	return tempFile, nil
+}
+
+// RelativePath computes the relative path from file1 to file2
+func RelativePath(file1, file2 string) (string, error) {
+	// Get the directory of file1
+	dir1 := filepath.Dir(file1)
+
+	// Get the absolute path of file1's directory
+	absDir1, err := filepath.Abs(dir1)
+	if err != nil {
+		return "", err
+	}
+
+	// Get the absolute path of file2
+	absFile2, err := filepath.Abs(file2)
+	if err != nil {
+		return "", err
+	}
+
+	// Calculate the relative path from file1's directory to file2
+	relPath, err := filepath.Rel(absDir1, absFile2)
+	if err != nil {
+		return "", err
+	}
+
+	return relPath, nil
 }
