@@ -1,4 +1,4 @@
-package mirror
+package xurl
 
 import (
 	"fmt"
@@ -141,4 +141,27 @@ func CleanUrl(targetUrl string) (string, error) {
 func CleanSlash(path string) string {
 	re := regexp.MustCompile(`/{2,}`)
 	return re.ReplaceAllString(path, "/")
+}
+
+// SameHost checks if two URLs have the same host.
+//
+// It parses both input URLs and compares their host components.
+// If either URL is malformed, as defined by [url.Parse], an error is returned.
+//
+// Returns:
+// - true if the hosts are the same, false otherwise.
+// - An error if either URL is malformed.
+func SameHost(url1, url2 string) bool {
+	parsedURL1, err := url.Parse(url1)
+	if err != nil {
+		return false
+	}
+
+	parsedURL2, err := url.Parse(url2)
+	if err != nil {
+		return false
+	}
+
+	// Compare the hosts
+	return parsedURL1.Host == parsedURL2.Host
 }

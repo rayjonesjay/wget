@@ -1,4 +1,4 @@
-package mirror
+package xurl
 
 import (
 	"fmt"
@@ -663,4 +663,102 @@ func ExampleRelativeFolder() {
 
 	// Expected Output:
 	// Projects/GoProject
+}
+
+func TestSameHost(t *testing.T) {
+	type args struct {
+		url1 string
+		url2 string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "Same host with same protocol",
+			args: args{
+				url1: "https://example.com/path",
+				url2: "https://example.com/anotherpath",
+			},
+			want: true,
+		},
+		{
+			name: "Same host with different protocols",
+			args: args{
+				url1: "http://example.com/path",
+				url2: "https://example.com/anotherpath",
+			},
+			want: true,
+		},
+		{
+			name: "Different hosts",
+			args: args{
+				url1: "https://example.com/path",
+				url2: "https://another.com/anotherpath",
+			},
+			want: false,
+		},
+		{
+			name: "Subdomain vs main domain",
+			args: args{
+				url1: "https://sub.example.com/path",
+				url2: "https://example.com/anotherpath",
+			},
+			want: false,
+		},
+		{
+			name: "Same host with different ports",
+			args: args{
+				url1: "https://example.com:8080/path",
+				url2: "https://example.com:9090/anotherpath",
+			},
+			want: false,
+		},
+		{
+			name: "Non-standard scheme",
+			args: args{
+				url1: "htp://example.com/path", // intentional typo in scheme
+				url2: "https://example.com/anotherpath",
+			},
+			want: true,
+		},
+		{
+			name: "Empty URLs",
+			args: args{
+				url1: "",
+				url2: "https://example.com/anotherpath",
+			},
+			want: false,
+		},
+		{
+			name: "Both URLs empty",
+			args: args{
+				url1: "",
+				url2: "",
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				got := SameHost(tt.args.url1, tt.args.url2)
+				if got != tt.want {
+					t.Errorf("SameHost() got = %v, want %v", got, tt.want)
+				}
+			},
+		)
+	}
+}
+
+func ExampleSameHost() {
+	isSameHost := SameHost("https://example.com/path", "https://example.com/anotherpath")
+	if isSameHost {
+		fmt.Println("The URLs have the same host.")
+	} else {
+		fmt.Println("The URLs have different hosts.")
+	}
+	// Output: The URLs have the same host.
 }
