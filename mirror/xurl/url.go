@@ -152,16 +152,10 @@ func CleanSlash(path string) string {
 // - true if the hosts are the same, false otherwise.
 // - An error if either URL is malformed.
 func SameHost(url1, url2 string) bool {
-	parsedURL1, err := url.Parse(url1)
-	if err != nil {
-		return false
+	parsedURL1, err1 := url.Parse(url1)
+	parsedURL2, err2 := url.Parse(url2)
+	if err1 == nil && err2 == nil {
+		return parsedURL1.Host == parsedURL2.Host
 	}
-
-	parsedURL2, err := url.Parse(url2)
-	if err != nil {
-		return false
-	}
-
-	// Compare the hosts
-	return parsedURL1.Host == parsedURL2.Host
+	return false
 }
