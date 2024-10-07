@@ -84,7 +84,7 @@ func TestIsValidURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				if got, _ := IsValidURL(tt.args.url); got != tt.want {
+				if _, got, _ := IsValidURL(tt.args.url); got != tt.want {
 					t.Errorf("IsValidURL() = %v, want %v", got, tt.want)
 				}
 			},
