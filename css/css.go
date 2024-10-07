@@ -4,6 +4,7 @@ package css
 import (
 	"bytes"
 	"github.com/tdewolff/parse/css"
+	"io"
 	"regexp"
 	"strings"
 )
@@ -12,11 +13,22 @@ import (
 // then modifying the url link defined in the url() function according to the defined transformer.
 // returns the transformed CSS string. Does nothing if the transformer function is nil
 func TransformCssUrl(cssStr string, transformer func(url string) string) string {
+	return TransformCssUrlReader(strings.NewReader(cssStr), transformer)
+}
+
+// TransformCssUrlReader parses the given CSS, checking for calls to the CSS url() functions,
+// then modifying the url link defined in the url() function according to the defined transformer.
+// returns the transformed CSS string. Does nothing if the transformer function is nil
+func TransformCssUrlReader(cssReader io.Reader, transformer func(url string) string) string {
 	if transformer == nil {
-		return cssStr
+		all, err := io.ReadAll(cssReader)
+		if err != nil {
+			return ""
+		}
+		return string(all)
 	}
 
-	l := css.NewLexer(strings.NewReader(cssStr))
+	l := css.NewLexer(cssReader)
 	b := strings.Builder{}
 	for {
 		tt, data := l.Next()
