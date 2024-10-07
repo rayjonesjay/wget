@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
 	"wget/ctx"
 	"wget/fileio"
 	"wget/help"
@@ -78,12 +79,12 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		default:
-			isValid, err := xurl.IsValidURL(arg)
+			args, isValid, err := xurl.IsValidURL(arg)
 			if err != nil {
 				xerr.WriteError(err, 1, true)
 			}
 			if isValid {
-				Arguments.Links = append(Arguments.Links, arg)
+				Arguments.Links = append(Arguments.Links, args)
 			}
 		}
 	}
@@ -139,12 +140,12 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		link := strings.TrimSpace(scanner.Text())
-		ok, err := xurl.IsValidURL(link)
+		lnk, ok, err := xurl.IsValidURL(link)
 		if err != nil {
 			xerr.WriteError(err, 1, true)
 		}
 		if ok {
-			links = append(links, link)
+			links = append(links, lnk)
 		}
 	}
 	return links, nil
