@@ -50,13 +50,6 @@ func extract(n *html.Node, extractedLinks *[]UrlExtract) {
 		}
 	}
 
-	if n.Type == html.ElementNode && n.Data == "script" {
-		// the current node is a <script> tag, extract its content
-		scriptContent := textContent(n)
-		jsModules := links.FromJs(scriptContent)
-		*extractedLinks = append(*extractedLinks, fromLinks(jsModules)...)
-	}
-
 	if n.Type == html.ElementNode && n.Data == "style" {
 		// the current node is a <style> tag, extract its content
 		styleContent := textContent(n)
