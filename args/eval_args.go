@@ -21,11 +21,12 @@ import (
 // as defined by (parsing and evaluating) the commandline arguments.
 func DownloadContext(arguments []string) (Arguments ctx.Context) {
 	for _, arg := range arguments {
+
 		switch {
-		case IsHelpFlag(arg):
+		case arg == "--help":
 			xerr.WriteError(help.UsageMessage, 0, true)
 
-		case IsBackgroundFlag(arg):
+		case arg == "-B":
 			Arguments.BackgroundMode = true
 
 		case strings.HasPrefix(arg, "-P="):
@@ -39,8 +40,14 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			if isParsed {
 				Arguments.InputFile = path
 				slice, err := ReadUrlFromFile(path)
+
 				if err != nil {
 					xerr.WriteError(err, 2, false)
+				}
+
+				// if we read the file and find no urls(empty file)
+				if len(slice) == 0 {
+					xerr.WriteError(fmt.Sprintf("No URLs found in %v", path), 2, false)
 				}
 				Arguments.Links = append(Arguments.Links, slice...)
 			}
@@ -48,7 +55,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		case arg == "--mirror":
 			Arguments.Mirror = true
 
-		case IsConvertLinksOn(arg):
+		case arg == "--convert-links":
 			Arguments.ConvertLinks = true
 
 		case strings.HasPrefix(arg, "-O="):
@@ -59,7 +66,6 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		case strings.HasPrefix(arg, "--rate-limit="):
 			Arguments.RateLimit = strings.TrimPrefix(arg, "--rate-limit=")
 			Arguments.RateLimitValue = toBytes(Arguments.RateLimit)
-			fmt.Println(Arguments.RateLimitValue)
 
 		case strings.HasPrefix(arg, "-R="):
 			rejects := strings.Split(strings.TrimPrefix(arg, "-R="), ",")
@@ -79,6 +85,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 		default:
 			isValid, err := xurl.IsValidURL(arg)
+
 			if err != nil {
 				xerr.WriteError(err, 1, true)
 			}
@@ -166,12 +173,6 @@ func IsOutputFlag(arg string) (bool, string) {
 	return false, ""
 }
 
-// IsConvertLinksOn checks if --convert-links argument is parsed, in order to determine whether
-// the links will be converted for local viewing
-func IsConvertLinksOn(arg string) bool {
-	return strings.HasPrefix(arg, "--") && strings.Contains(arg, "convert-links")
-}
-
 // InputFile recognizes if -i=<filename> has been parsed together with a valid filename that exist
 // if it does not exist or is empty returns false and empty string
 func InputFile(s string) (bool, string) {
@@ -202,22 +203,9 @@ func IsPathFlag(s string) (bool, string) {
 	return true, matches[1]
 }
 
-// IsBackgroundFlag returns true if -B has been parsed in the command line,else false
-func IsBackgroundFlag(s string) bool {
-	s = strings.ToUpper(s)
-	pattern := `^-B`
-	re := regexp.MustCompile(pattern)
+// IsHelpFlag checks whether an argument passed through the command line is --help, for displaying the help manual
+func IsHelpFlag(s string) bool {
+	pat := `^--help$`
+	re := regexp.MustCompile(pat)
 	return re.MatchString(s)
-}
-
-// IsHelpFlag detects if any of the flags parsed has the --help
-// format which displays how to use the program.
-func IsHelpFlag(argument string) bool {
-	argument = strings.ToLower(strings.TrimSpace(argument))
-
-	helpPattern := `^--help$`
-
-	re := regexp.MustCompile(helpPattern)
-
-	return re.MatchString(argument)
 }
