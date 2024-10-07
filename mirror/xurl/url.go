@@ -121,7 +121,7 @@ func CleanUrl(targetUrl string) (string, error) {
 	if err != nil {
 		return "", err
 	} else if u.Opaque != "" {
-		return "", fmt.Errorf("we don't yet handle opaque URLS: %s", u.Opaque)
+		return "", fmt.Errorf("we don't yet handle opaque URLs: %s", u.Opaque)
 	}
 
 	u.Path = CleanSlash(u.Path)
