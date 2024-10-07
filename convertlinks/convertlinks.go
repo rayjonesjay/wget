@@ -60,11 +60,6 @@ func (e *ExtractConfig) extract(n *html.Node) {
 		}
 	}
 
-	// TODO: convert urls in javascript imports and require functions
-	//if n.Type == html.ElementNode && n.Data == "script" {
-	//	// the current node is a <script> tag, extract its content
-	//}
-
 	if n.Type == html.ElementNode && n.Data == "style" {
 		// the current node is a <style> tag, extract its text content (the CSS definitions)
 		styleContent, tcNode := textContentNode(n)
