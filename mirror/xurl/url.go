@@ -73,11 +73,13 @@ func DownloadFolder(targetUrl string) (loc DownloadLocation) {
 		host = u.Host + "/"
 	}
 
-	loc.FolderName = filepath.Dir(host + u.Path)
-	loc.FileName = filepath.Base(u.Path)
+	filePath := host + u.Path
+	loc.FolderName = filepath.Dir(filePath)
+	//loc.FileName = filepath.Base(u.Path)
+	loc.FileName = strings.TrimPrefix(filePath, loc.FolderName)
+	loc.FileName = strings.TrimPrefix(loc.FileName, "/")
 
-	// For consistency, we translate any `/` filename as may be returned by filepath.Base to `.`
-	if loc.FileName == "/" {
+	if loc.FileName == "" {
 		loc.FileName = "."
 	}
 

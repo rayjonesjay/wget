@@ -508,6 +508,24 @@ func TestDownloadFolder(t *testing.T) {
 		},
 
 		{
+			name: "Path 1 trailing slash",
+			args: args{_url: "https://example.com/user/profile/settings/"},
+			want: DownloadLocation{
+				FolderName: "example.com/user/profile/settings",
+				FileName:   ".",
+			},
+		},
+
+		{
+			name: "Path 2 trailing slash",
+			args: args{_url: "https://theuselessweb.com/privacy"},
+			want: DownloadLocation{
+				FolderName: "theuselessweb.com",
+				FileName:   "privacy",
+			},
+		},
+
+		{
 			name: "Root url (no scheme)",
 			args: args{_url: "/example.com/user/profile/settings"},
 			want: DownloadLocation{

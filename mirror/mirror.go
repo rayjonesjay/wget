@@ -97,8 +97,13 @@ func Site(cxt ctx.Context, mirrorUrl string) error {
 // GetFile returns a writable file, where the downloaded file will be written into,
 // or an error if it fails. GetFile honours the current download context as specified by this instance
 func (a *arg) GetFile(downloadUrl string, header http.Header) (*os.File, error) {
-	path := GetFile(downloadUrl, header, a.SavePath)
-	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+	downloadPath := GetFile(downloadUrl, header, a.SavePath)
+	log.Printf("downloading url %q -> %q\n", downloadUrl, downloadPath)
+	err := ForceMkdirAll(downloadPath)
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(downloadPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
 }
 
 // Site downloads the entire website being possible to use "part" of the website offline,
@@ -191,6 +196,8 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		if err != nil {
 			log.Println(err)
 			continue
+		} else if !xurl.SameHost(mirrorUrl, linkUrl) {
+			continue
 		}
 
 		linkInfo, err := a.Site(linkUrl)
@@ -204,7 +211,7 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		} else {
 			fmt.Printf("saved to -> %s\n", linkInfo.Name)
 			fmt.Printf("parent: %s -> relative: %s\n", info.Name, linkInfo.Name)
-			convertUrls[link], _ = RelativePath(info.Name, linkInfo.Name)
+			convertUrls[link], _ = relativePath(info.Name, linkInfo.Name)
 		}
 	}
 
@@ -269,6 +276,8 @@ func (a *arg) FetchCss(mirrorUrl, fileName string) {
 		if err != nil {
 			log.Println(err)
 			continue
+		} else if !xurl.SameHost(mirrorUrl, linkedUrl) {
+			continue
 		}
 
 		linkInfo, err := a.Site(linkedUrl)
@@ -285,7 +294,7 @@ func (a *arg) FetchCss(mirrorUrl, fileName string) {
 		fmt.Printf("parent: %s -> relative: %s\n", fileName, linkInfo.Name)
 
 		if a.ConvertLinks {
-			convertUrls[linkedUrl], _ = RelativePath(fileName, linkInfo.Name)
+			convertUrls[linkedUrl], _ = relativePath(fileName, linkInfo.Name)
 		}
 	}
 
@@ -325,8 +334,8 @@ func (a *arg) FetchCss(mirrorUrl, fileName string) {
 	}
 }
 
-// RelativePath computes the relative path from file1 to file2
-func RelativePath(file1, file2 string) (string, error) {
+// relativePath computes the relative path from file1 to file2
+func relativePath(file1, file2 string) (string, error) {
 	// Get the directory of file1
 	dir1 := filepath.Dir(file1)
 
