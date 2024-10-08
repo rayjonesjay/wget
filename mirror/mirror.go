@@ -25,6 +25,7 @@ import (
 // map of content types to preferred file extensions
 var contentTypeExtensions = map[string]string{
 	"text/html":              "html",
+	"text/plain":             "txt",
 	"text/css":               "css",
 	"text/javascript":        "js",
 	"application/javascript": "js",
@@ -41,7 +42,6 @@ var contentTypeExtensions = map[string]string{
 	"video/webm":             "webm",
 	"application/zip":        "zip",
 	"application/x-gzip":     "gz",
-	//"application/octet-stream": "bin",
 }
 
 // arg embeds the download context to add custom receiver functions
