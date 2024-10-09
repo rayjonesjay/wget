@@ -3,7 +3,6 @@ package mirror
 
 import (
 	"errors"
-	"fmt"
 	"golang.org/x/net/html"
 	"io"
 	"log"
@@ -110,8 +109,8 @@ func (a *arg) GetFile(downloadUrl string, header http.Header) (*os.File, error) 
 // respecting the download context defined by the given instance.
 // If no scheme is detected in the mirror URL, then, the HTTP scheme is assumed
 func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
-	fmt.Printf("Fetching >> %q\n", mirrorUrl)
-	defer fmt.Printf("[1] Done\n")
+	log.Printf("[1] Fetching >> %q\n", mirrorUrl)
+	defer log.Printf("[1] Done\n")
 	// check if the given URL has already been downloaded by this instance
 	err = func() error {
 		a.mutex.Lock()
@@ -174,7 +173,7 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	}
 
 	linkedUrls := links.FromHtml(doc)
-	fmt.Printf("Found linkedUrls: %v\n", linkedUrls)
+	log.Printf("Found linkedUrls: %v\n", linkedUrls)
 	if len(linkedUrls) == 0 {
 		// No more links to download
 		return
@@ -209,13 +208,13 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		if err != nil {
 			log.Println(err)
 		} else {
-			fmt.Printf("saved to -> %s\n", linkInfo.Name)
-			fmt.Printf("parent: %s -> relative: %s\n", info.Name, linkInfo.Name)
+			log.Printf("saved to -> %s\n", linkInfo.Name)
+			log.Printf("parent: %s -> relative: %s\n", info.Name, linkInfo.Name)
 			convertUrls[link], _ = relativePath(info.Name, linkInfo.Name)
 		}
 	}
 
-	fmt.Printf("Converter Map >> %v\n", convertUrls)
+	log.Printf("Converter Map >> %v\n", convertUrls)
 	convertLinks := func() {
 		linkConverter := func(url string, isA bool) string {
 			if toUrl, ok := convertUrls[url]; ok {
@@ -290,8 +289,8 @@ func (a *arg) FetchCss(mirrorUrl, fileName string) {
 			log.Println(err)
 			continue
 		}
-		fmt.Printf("saved to -> %s\n", linkInfo.Name)
-		fmt.Printf("parent: %s -> relative: %s\n", fileName, linkInfo.Name)
+		log.Printf("saved to -> %s\n", linkInfo.Name)
+		log.Printf("parent: %s -> relative: %s\n", fileName, linkInfo.Name)
 
 		if a.ConvertLinks {
 			convertUrls[linkedUrl], _ = relativePath(fileName, linkInfo.Name)

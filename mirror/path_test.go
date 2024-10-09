@@ -23,6 +23,20 @@ func TestGetFile(t *testing.T) {
 		headerStream.Set("Content-Type", "octet-stream; charset=utf-8")
 	}
 
+	ContentTypeDisposition := func(contentType, disposition string) http.Header {
+		withContentDisposition := http.Header{}
+
+		withContentDisposition.Set("Content-Type", contentType+"; charset=utf-8")
+		withContentDisposition.Set("Content-Disposition", "attachment; filename="+disposition)
+
+		return withContentDisposition
+	}
+
+	headerText := http.Header{}
+	{
+		headerText.Set("Content-Type", "text/plain; charset=utf-8")
+	}
+
 	type args struct {
 		downloadUrl  string
 		header       http.Header
@@ -34,7 +48,7 @@ func TestGetFile(t *testing.T) {
 		want string
 	}{
 		{
-			name: "Valid URL with no path",
+			name: "Root URL",
 			args: args{
 				downloadUrl:  "http://example.com",
 				header:       http.Header{},
@@ -42,6 +56,37 @@ func TestGetFile(t *testing.T) {
 			},
 			want: "/downloads/example.com/index.html",
 		},
+
+		{
+			name: "Root URL (trailing slash)",
+			args: args{
+				downloadUrl:  "http://example.com/",
+				header:       http.Header{},
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/example.com/index.html",
+		},
+
+		{
+			name: "Root URL (host:port)",
+			args: args{
+				downloadUrl:  "http://example.com:9000",
+				header:       http.Header{},
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/example.com/index.html",
+		},
+
+		{
+			name: "Root URL (host:port) (trailing slash)",
+			args: args{
+				downloadUrl:  "http://example.com:8000/",
+				header:       http.Header{},
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/example.com/index.html",
+		},
+
 		{
 			name: "Valid URL with path",
 			args: args{
@@ -53,8 +98,17 @@ func TestGetFile(t *testing.T) {
 		},
 
 		{
-			// TODO
 			name: "Valid URL with path (trailing slash)",
+			args: args{
+				downloadUrl:  "http://example.com/resource/file.txt/",
+				header:       headerText,
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/example.com/resource/file.txt/index.txt",
+		},
+
+		{
+			name: "Valid wget URL with path (trailing slash)",
 			args: args{
 				downloadUrl:  "http://example.com/wget/",
 				header:       headerHTML,
@@ -64,17 +118,17 @@ func TestGetFile(t *testing.T) {
 		},
 
 		{
-			name: "Valid URL with path (no trailing slash)",
+			name: "Valid wget URL with path (no trailing slash)",
 			args: args{
 				downloadUrl:  "http://example.com/wget",
 				header:       headerHTML,
 				parentFolder: "downloads",
 			},
-			want: "downloads/example.com/wget/index.html",
+			want: "downloads/example.com/wget",
 		},
 
 		{
-			name: "Valid URL with path (no trailing slash)",
+			name: "Valid wget CSS URL with path (no trailing slash)",
 			args: args{
 				downloadUrl:  "http://example.com/wget",
 				header:       headerCSS,
@@ -84,10 +138,20 @@ func TestGetFile(t *testing.T) {
 		},
 
 		{
+			name: "Valid wget CSS URL with path (trailing slash)",
+			args: args{
+				downloadUrl:  "http://example.com/wget/",
+				header:       headerCSS,
+				parentFolder: "downloads",
+			},
+			want: "downloads/example.com/wget/index.css",
+		},
+
+		{
 			name: "URL with query parameters",
 			args: args{
 				downloadUrl:  "http://example.com/resource/file.txt?version=1",
-				header:       http.Header{},
+				header:       headerText,
 				parentFolder: "/downloads",
 			},
 			want: "/downloads/example.com/resource/file.txt",
@@ -96,7 +160,7 @@ func TestGetFile(t *testing.T) {
 			name: "URL with special characters",
 			args: args{
 				downloadUrl:  "http://example.com/resource/file@name.txt",
-				header:       http.Header{},
+				header:       headerText,
 				parentFolder: "/downloads",
 			},
 			want: "/downloads/example.com/resource/file@name.txt",
@@ -105,52 +169,130 @@ func TestGetFile(t *testing.T) {
 			name: "Empty URL",
 			args: args{
 				downloadUrl:  "",
-				header:       http.Header{},
+				header:       headerHTML,
 				parentFolder: "/downloads",
 			},
-			want: "/downloads/index.html",
-		},
-		{
-			name: "Invalid URL",
-			args: args{
-				downloadUrl:  "htp://invalid-url",
-				header:       http.Header{},
-				parentFolder: "/downloads",
-			},
-			want: "/downloads/invalid-url/index.html",
+			want: "",
 		},
 
 		{
-			// TODO: TWO
+			name: "Non-HTTP scheme",
+			args: args{
+				downloadUrl:  "ftp://invalid-scheme",
+				header:       http.Header{},
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/invalid-scheme/index.html",
+		},
+
+		{
+			name: "Non-HTTP scheme trailing slash",
+			args: args{
+				downloadUrl:  "ftp://invalid-scheme/",
+				header:       http.Header{},
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/invalid-scheme/index.html",
+		},
+
+		{
+			name: "Invalid URL trailing slash",
+			args: args{
+				downloadUrl:  "https://example.com:xxxx/",
+				header:       headerHTML,
+				parentFolder: "/downloads",
+			},
+			want: "",
+		},
+
+		{
 			name: "Invalid URL",
+			args: args{
+				downloadUrl:  "https://example.com:xxxx",
+				header:       headerHTML,
+				parentFolder: "/downloads",
+			},
+			want: "",
+		},
+
+		{
+			name: "Incomplete URL",
+			args: args{
+				downloadUrl:  "https://",
+				header:       headerHTML,
+				parentFolder: "/downloads",
+			},
+			want: "",
+		},
+
+		{
+			name: "Test case 1 trailing slash",
 			args: args{
 				downloadUrl:  "https://wizard254.github.io/wget/css-beer/",
-				header:       http.Header{},
+				header:       headerHTML,
 				parentFolder: "/downloads",
 			},
-			want: "wizard254.github.io/wget/css-beer/index.html",
+			want: "/downloads/wizard254.github.io/wget/css-beer/index.html",
 		},
 
 		{
-			// TODO: TWO
-			name: "Invalid URL",
+			name: "Test case 1",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/css-beer",
+				header:       headerHTML,
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/css-beer",
+		},
+
+		{
+			name: "Test case 1 trailing slash (CSS)",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/css-beer/",
+				header:       headerCSS,
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/css-beer/index.css",
+		},
+
+		{
+			name: "Test case 1 trailing slash (stream)",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer/",
+				header:       headerStream,
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer/index.html",
+		},
+
+		{
+			name: "Test case 1 no trailing slash (stream)",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer",
+				header:       headerStream,
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer",
+		},
+
+		{
+			name: "Test case 1 no trailing slash (CSS)",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer",
+				header:       headerCSS,
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer",
+		},
+
+		{
+			name: "css-beer stylesheet",
 			args: args{
 				downloadUrl:  "https://wizard254.github.io/wget/css-beer/style.css",
 				header:       http.Header{},
 				parentFolder: "/downloads",
 			},
-			want: "wizard254.github.io/wget/css-beer/style.css",
-		},
-
-		{
-			// TODO: TWO
-			name: "Invalid URL",
-			args: args{
-				downloadUrl:  "https://wizard254.github.io/wget/",
-				header:       http.Header{},
-				parentFolder: "/downloads",
-			},
-			want: "wizard254.github.io/wget/index.html",
+			want: "/downloads/wizard254.github.io/wget/css-beer/style.css",
 		},
 
 		{
@@ -161,6 +303,66 @@ func TestGetFile(t *testing.T) {
 				parentFolder: "/nonexistent/path",
 			},
 			want: "/nonexistent/path/example.com/resource/file.txt",
+		},
+
+		{
+			name: "Save path does not exist (Wrong Content-type)",
+			args: args{
+				downloadUrl:  "http://example.com/resource/file.txt",
+				header:       headerHTML,
+				parentFolder: "/nonexistent/path",
+			},
+			want: "/nonexistent/path/example.com/resource/file.txt",
+		},
+
+		{
+			name: "Test case 2 no trailing slash (text) disposition",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer",
+				header:       ContentTypeDisposition("text/plain", "beer.txt"),
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer.txt",
+		},
+
+		{
+			name: "Test case 2 no trailing slash (text) disposition markdown",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer",
+				header:       ContentTypeDisposition("text/plain", "beer.md"),
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer.md",
+		},
+
+		{
+			name: "Test case 2 no trailing slash (stream) disposition",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer",
+				header:       ContentTypeDisposition("octet-stream", "beer.txt"),
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer.txt",
+		},
+
+		{
+			name: "Test case 2 no trailing slash (stream) disposition markdown",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer",
+				header:       ContentTypeDisposition("octet-stream", "beer.md"),
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer.md",
+		},
+
+		{
+			name: "Test case 2 no trailing slash (stream) malformed disposition",
+			args: args{
+				downloadUrl:  "https://wizard254.github.io/wget/beer",
+				header:       ContentTypeDisposition("octet-stream", ""),
+				parentFolder: "/downloads",
+			},
+			want: "/downloads/wizard254.github.io/wget/beer",
 		},
 	}
 
@@ -178,7 +380,6 @@ func TestGetFile(t *testing.T) {
 // Example test case
 func ExampleGetFile() {
 	header := http.Header{}
-	header.Set("User-Agent", "my-agent")
 	path := GetFile("http://example.com/resource/file.txt", header, "/downloads")
 	fmt.Println(path)
 	// Output: /downloads/example.com/resource/file.txt
