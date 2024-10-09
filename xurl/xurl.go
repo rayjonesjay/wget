@@ -12,8 +12,21 @@ import (
 
 // IsValidURL checks if the given string is a valid URL
 func IsValidURL(rawUrl string) (string, bool, error) {
+	if strings.Contains(rawUrl, ":") {
+		parts := strings.Split(rawUrl, ":")
+		if parts[1] == "80"{
+			rawUrl = "http://" + parts[0]
+		}
+		if parts[1] == "443"{
+			rawUrl = "https://" + parts[0]
+		}
+	}
 	if !strings.HasPrefix(rawUrl, "http://") && !strings.HasPrefix(rawUrl, "https://") {
-		rawUrl = "https://" + rawUrl
+		if strings.HasPrefix(rawUrl, "localhost") || strings.HasPrefix(rawUrl, "127.0.0.1") {
+			rawUrl = "http://" + rawUrl // Default to http for localhost
+		} else {
+			rawUrl = "https://" + rawUrl // Default to https for other cases
+		}
 	}
 	parsedURL, err := url.ParseRequestURI(rawUrl)
 	if err != nil {
@@ -39,9 +52,10 @@ func IsValidURL(rawUrl string) (string, bool, error) {
 	if strings.HasPrefix(parsedURL.Host, ".") || strings.HasPrefix(parsedURL.Host, "-") {
 		return "", false, fmt.Errorf("wrong host format %q", parsedURL.Host)
 	}
-
+	hostParts := strings.Split(parsedURL.Host, ":")
+	host := hostParts[0]
 	// Check that the host contains at least one dot (valid domain format) or is localhost
-	if !strings.Contains(parsedURL.Host, ".") && parsedURL.Host != "localhost" {
+	if !strings.Contains(host, ".") && host != "localhost" && host != "127.0.0.1" {
 		return "", false, xerr.ErrInvalidDomainFormat
 	}
 
