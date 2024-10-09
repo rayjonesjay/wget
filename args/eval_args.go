@@ -24,7 +24,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 		switch {
 		case arg == "--help":
-			xerr.WriteError(help.UsageMessage, 0, true)
+			xerr.WriteError(help.Manual, 0, true)
 
 		case arg == "-B":
 			Arguments.BackgroundMode = true
@@ -84,14 +84,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		default:
-			isValid, err := xurl.IsValidURL(arg)
-
-			if err != nil {
-				xerr.WriteError(err, 1, true)
-			}
-			if isValid {
-				Arguments.Links = append(Arguments.Links, arg)
-			}
+			Arguments.Links = append(Arguments.Links, arg)
 		}
 	}
 	return
