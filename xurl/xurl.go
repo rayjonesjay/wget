@@ -12,13 +12,12 @@ import (
 
 // IsValidURL checks if the given string is a valid URL
 func IsValidURL(rawUrl string) (string, bool, error) {
+	if !strings.HasPrefix(rawUrl, "http://") && !strings.HasPrefix(rawUrl, "https://") {
+		rawUrl = "https://" + rawUrl
+	}
 	parsedURL, err := url.ParseRequestURI(rawUrl)
 	if err != nil {
-		parsedURL, err = url.ParseRequestURI("https://" + rawUrl)
-		rawUrl = "https://" + rawUrl
-		if err != nil {
-			return "", false, fmt.Errorf("invalid URL: %v", err)
-		}
+		return "", false, fmt.Errorf("invalid URL: %v", err)
 	}
 
 	// check if scheme component of the URL is empty
