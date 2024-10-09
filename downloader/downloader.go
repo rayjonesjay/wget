@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,6 +12,7 @@ import (
 	"sync"
 	"time"
 	"wget/ctx"
+	"wget/mirror"
 	"wget/xerr"
 )
 
@@ -228,19 +228,23 @@ func (a *arg) IsEmpty(data interface{}) bool {
 func (a *arg) MirrorWeb() error {
 
 	for _, link := range a.Links {
-		parsedUrl, err := url.Parse(link)
+		err := mirror.Site(*a.Context, link)
 		if err != nil {
 			return err
 		}
-
-		// by default the downloaded data will be saved to the name of domain if not specified
-		domain := parsedUrl.Host
-		directoryToSaveData := filepath.Join(a.SavePath, domain)
-
-		err = os.MkdirAll(directoryToSaveData, 0755)
-		if err != nil {
-			return err
-		}
+		//parsedUrl, err := url.Parse(link)
+		//if err != nil {
+		//	return err
+		//}
+		//
+		//// by default the downloaded data will be saved to the name of domain if not specified
+		//domain := parsedUrl.Host
+		//directoryToSaveData := filepath.Join(a.SavePath, domain)
+		//
+		//err = os.MkdirAll(directoryToSaveData, 0755)
+		//if err != nil {
+		//	return err
+		//}
 
 		// Download and parse the HTML/CSS
 		//err = a.downloadAndParseHTML(link, directoryToSaveData)
