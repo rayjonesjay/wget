@@ -47,7 +47,7 @@ WGET is a utility that is used for non-interactive downloads over the net.
 ```
 
 ## Functionalities
-1. wget downloads a file given an URL-(Uniform Resource Locator) parsed through the command line.
+1. Downloading a file given an URL-(Uniform Resource Locator) parsed through the command line.
 
 For example:
 ```
@@ -87,7 +87,7 @@ $ go run . --background URL
 
 For example:
 ```
-$ go run . -i=file_with_links
+$ go run . -i=path/to/file/with/links
 ```
 
 7. Main Feature will be to download an entire website also known as mirror.
@@ -96,3 +96,13 @@ For example:
 ```
 $ go run . --mirror URL
 ```
+
+
+### Authors
+* [**ramuiruri**](https://learn.zone01kisumu.ke/git/ramuiruri)
+
+* [najwang](https://learn.zone01kisumu.ke/git/najwang)
+
+* [wyonyango](https://learn.zone01kisumu.ke/git/wyonyango)
+
+* [shfana](https://learn.zone01kisumu.ke/git/shfana)
