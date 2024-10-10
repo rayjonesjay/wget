@@ -2,7 +2,9 @@
 package httpx
 
 import (
+	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -24,9 +26,9 @@ func ExtractMimeType(headers http.Header) string {
 	return mimeType
 }
 
-// ExtractContentLength extracts the Content-Length from HTTP response headers as
+// ExtractContentLength extracts the `Content-Length` from HTTP response headers as
 // an int. Suppose, no `Content-Length` header exists in the response headers or
-// the value don't make sense as an integer, then, -1 is returned
+// the if the value doesn't make sense as an integer, then, -1 is returned
 func ExtractContentLength(headers http.Header) int64 {
 	contentLengthStr := headers.Get("Content-Length")
 	if contentLengthStr == "" {
@@ -40,4 +42,22 @@ func ExtractContentLength(headers http.Header) int64 {
 	}
 
 	return contentLength
+}
+
+// FilenameFromContentDisposition returns the filename for the response contents, as dictated by
+// HTTP `Content -Disposition` headers
+func FilenameFromContentDisposition(headers http.Header) (string, error) {
+	contentDisposition := headers.Get("Content-Disposition")
+	if contentDisposition == "" {
+		return "", errors.New("content-disposition header not found")
+	}
+
+	re := regexp.MustCompile(`(?i)filename\s*=\s*"?([^";]+)"?`)
+	matches := re.FindStringSubmatch(contentDisposition)
+
+	if len(matches) < 2 {
+		return "", errors.New("filename parameter not found in content-disposition header")
+	}
+
+	return matches[1], nil
 }
