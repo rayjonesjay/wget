@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-	rawUrl = "https://" + parts[0]
-
 	"wget/ctx"
 	"wget/fileio"
 	"wget/help"
