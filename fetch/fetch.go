@@ -56,6 +56,9 @@ type Config struct {
 	// given URL. The function is provided the headers received from the request to
 	// the target url
 	GetFile func(url string, header http.Header) (*os.File, error)
+	// ShouldDownload will be called to validate whether the file from the given url
+	// should be downloaded, based on the given headers as retrieved from the server
+	ShouldDownload func(url string, header http.Header) bool
 	// Limit the download speed to a maximum of Limit bytes/second. A Limit <= 0 infers no rate limiting
 	Limit int32
 	// ProgressListener will be called every time some buffered read occurs,
@@ -116,6 +119,11 @@ func URL(url string, config Config) (info FileInfo, err error) {
 		return
 	}
 	defer fileio.Close(resp.Body)
+
+	if config.ShouldDownload != nil && !config.ShouldDownload(url, resp.Header) {
+		err = fmt.Errorf("skipping download of url: %q", url)
+		return
+	}
 
 	if config.AllowedStatusCodes != nil && !slices.Contains(config.AllowedStatusCodes, resp.StatusCode) {
 		err = fmt.Errorf("wrong status code: %v", resp.StatusCode)
