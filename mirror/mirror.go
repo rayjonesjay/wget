@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"wget/convertlinks"
 	"wget/ctx"
@@ -56,6 +57,10 @@ type arg struct {
 	//such as the filename the contents of the URL was written to,
 	//and whether there was any error when downloading the file
 	urlDownloadInfo map[string]UrlDownloadInfo
+	// rejectPatterns keeps a list of regex patterns to match files to be rejected for download
+	rejectPatterns []*regexp.Regexp
+	// excludePatterns keeps a list of regex patterns to match directories to be rejected for download
+	excludePatterns []*regexp.Regexp
 }
 
 // UrlDownloadInfo keeps the results of downloading a given URL,
@@ -89,8 +94,14 @@ func Site(cxt ctx.Context, mirrorUrl string) error {
 		parse.Scheme = "http"
 	}
 
+	m.init()
 	_, err = m.Site(parse.String())
 	return err
+}
+
+func (a *arg) init() {
+	a.initReject()
+	a.initExclude()
 }
 
 // GetFile returns a writable file, where the downloaded file will be written into,
@@ -103,6 +114,23 @@ func (a *arg) GetFile(downloadUrl string, header http.Header) (*os.File, error) 
 		return nil, err
 	}
 	return os.OpenFile(downloadPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+}
+
+func (a *arg) ShouldDownload(mirrorUrl string, header http.Header) bool {
+	if httpx.ExtractMimeType(header) == "text/html" {
+		return true
+	}
+
+	parse, err := url.Parse(mirrorUrl)
+	if err != nil {
+		return false
+	}
+
+	if a.ShouldReject(parse.Path) || a.ShouldExclude(parse.Path) {
+		return false
+	}
+
+	return true
 }
 
 // Site downloads the entire website being possible to use "part" of the website offline,
@@ -132,6 +160,7 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		mirrorUrl,
 		fetch.Config{
 			GetFile:            a.GetFile,
+			ShouldDownload:     a.ShouldDownload,
 			Limit:              int32(a.RateLimitValue),
 			ProgressListener:   nil,
 			RateListener:       nil,
@@ -149,6 +178,12 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		url:      mirrorUrl,
 		FileInfo: info,
 		error:    err,
+	}
+
+	if !a.ShouldDownload(mirrorUrl, http.Header{}) {
+		defer func(name string) {
+			_ = os.Remove(name)
+		}(info.Name)
 	}
 
 	contentType := httpx.ExtractMimeType(info.Headers)
