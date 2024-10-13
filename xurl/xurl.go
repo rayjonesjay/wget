@@ -12,12 +12,15 @@ import (
 
 // IsValidURL checks if the given string is a valid URL
 func IsValidURL(rawUrl string) (string, bool, error) {
+	if strings.HasPrefix(rawUrl, "/") {
+		return "", false, xerr.ErrRelativeURL
+	}
 	if strings.Contains(rawUrl, ":") {
 		parts := strings.Split(rawUrl, ":")
-		if parts[1] == "80"{
+		if parts[1] == "80" {
 			rawUrl = "http://" + parts[0]
 		}
-		if parts[1] == "443"{
+		if parts[1] == "443" {
 			rawUrl = "https://" + parts[0]
 		}
 	}
