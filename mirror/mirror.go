@@ -99,6 +99,7 @@ func Site(cxt ctx.Context, mirrorUrl string) error {
 	return err
 }
 
+// init is called once, when the struct instance is created, to initialize various fields to their usable values
 func (a *arg) init() {
 	a.initReject()
 	a.initExclude()
@@ -116,6 +117,10 @@ func (a *arg) GetFile(downloadUrl string, header http.Header) (*os.File, error) 
 	return os.OpenFile(downloadPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
 }
 
+// ShouldDownload will be called to validate whether the file from the given url
+// should be downloaded, based on the given headers as retrieved from the server.
+// This will always download HTML files, so that we can extract linked URLs from
+// them, and later delete them if the directory-based-limits infer
 func (a *arg) ShouldDownload(mirrorUrl string, header http.Header) bool {
 	if httpx.ExtractMimeType(header) == "text/html" {
 		return true
@@ -291,8 +296,11 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	return
 }
 
+// FetchCss assumes the file of the given filename, is a CSS file and thus,
+// extracts all linked URLs, downloads the linked resources, then optionally
+// converting the links defined in the CSS file to local filesystem based paths
 func (a *arg) FetchCss(mirrorUrl, fileName string) {
-	// the downloaded file is CSS; attempt to extract linked xurl resources
+	// the downloaded file is CSS; attempt to extract linked url resources
 	cssFile, err := os.Open(fileName)
 	if err != nil {
 		return
@@ -303,7 +311,7 @@ func (a *arg) FetchCss(mirrorUrl, fileName string) {
 	// get all urls that are linked in the given CSS file
 	var linkedUrls = links.FromCssUrl(string(cssStr))
 
-	// download each linked xurl synchronously, continuing to the next regardless of errors
+	// download each linked url synchronously, continuing to the next regardless of errors
 	convertUrls := make(map[string]string)
 	for _, link := range linkedUrls {
 		linkedUrl, err := xurl.AbsoluteUrl(mirrorUrl, link)
