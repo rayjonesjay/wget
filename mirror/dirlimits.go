@@ -5,6 +5,8 @@ import (
 	"regexp"
 )
 
+// ShouldReject returns true if the given mirror URL path, refers to a file that
+// should not be downloaded; false otherwise
 func (a *arg) ShouldReject(mirrorPath string) bool {
 	mirrorPath = path.Base(mirrorPath)
 	for _, pattern := range a.rejectPatterns {
@@ -16,6 +18,8 @@ func (a *arg) ShouldReject(mirrorPath string) bool {
 	return false
 }
 
+// ShouldExclude returns true if the given mirror URL path, refers to a directory that
+// should not be downloaded; false otherwise
 func (a *arg) ShouldExclude(mirrorPath string) bool {
 	mirrorPath = path.Dir(mirrorPath)
 	for _, pattern := range a.excludePatterns {
@@ -27,7 +31,13 @@ func (a *arg) ShouldExclude(mirrorPath string) bool {
 	return false
 }
 
+// initReject creates a list of compiled regular expressions, that would be used
+// to match whether a given file should not be downloaded
 func (a *arg) initReject() {
+	if len(a.rejectPatterns) != 0 {
+		panic("rejectPatterns must be empty; init should ideally be called once after struct creation")
+	}
+
 	for _, reject := range a.Rejects {
 		regex, err := buildRegex(reject, true)
 		if err != nil {
@@ -37,7 +47,12 @@ func (a *arg) initReject() {
 	}
 }
 
+// initExclude creates a list of compiled regular expressions, that would be used
+// to match whether a given directory should not be downloaded
 func (a *arg) initExclude() {
+	if len(a.excludePatterns) != 0 {
+		panic("excludePatterns must be empty; init should ideally be called once after struct creation")
+	}
 	for _, exclude := range a.Exclude {
 		regex, err := buildRegex(exclude, false)
 		if err != nil {
@@ -47,6 +62,10 @@ func (a *arg) initExclude() {
 	}
 }
 
+// buildRegex attempts to compile a regex, from the given pattern as passed to
+// the directory-based-limits command-line arguments as --reject and --exclude,
+// (it takes a boolean to differentiate which of the two the pattern was
+// extracted)
 func buildRegex(pattern string, isReject bool) (*regexp.Regexp, error) {
 	re := regexp.MustCompile(`(\*)|(\?)|(\[.*])`)
 	//pattern := `hello-[1-3]-?.*.png`
