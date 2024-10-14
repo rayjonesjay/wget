@@ -18,7 +18,7 @@ func TestIsValidURL(t *testing.T) {
 		  false},
 
 		{"Valid HTTPS URL", 
-		"https://example.com", 
+		"https://google.com", 
 		true, 
 		false},
 
@@ -28,7 +28,7 @@ func TestIsValidURL(t *testing.T) {
 		   false},
 
 		{"URL without scheme (https)",
-		 "example.com", true, 
+		 "google.com", true, 
 		 false},
 
 		 //invalid cases
@@ -38,16 +38,16 @@ func TestIsValidURL(t *testing.T) {
 		 true},
 
 		{"Invalid URL with wrong scheme",
-		 "ftp://example.com",
+		 "ftp://google.com",
 		  false, 
 		  true},
 
 		{"Malformed URL with dot prefix",
-		 ".example.com", false,
+		 ".google.com", false,
 		  true},
 
 		{"Malformed URL with empty host", 
-		"http://-example.com", 
+		"http://-google.com", 
 		false,
 		 true},
 
@@ -72,12 +72,13 @@ func TestIsValidURL(t *testing.T) {
 		true},
 
 		{"Valid URL with subdomain", 
-		"http://sub.example.com", 
+		"http://sub.google.com", 
 		true, 
 		false},
 
 		{"Invalid URL with no scheme and invalid host", 
-		"-example.com", false,
+		"-google.com",
+		 false,
 		 true},
 	}
 
