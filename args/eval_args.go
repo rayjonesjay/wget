@@ -65,7 +65,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 		case strings.HasPrefix(arg, "--rate-limit="):
 			Arguments.RateLimit = strings.TrimPrefix(arg, "--rate-limit=")
-			Arguments.RateLimitValue = toBytes(Arguments.RateLimit)
+			Arguments.RateLimitValue = ToBytes(Arguments.RateLimit)
 
 		case strings.HasPrefix(arg, "-R="):
 			rejects := strings.Split(strings.TrimPrefix(arg, "-R="), ",")
@@ -94,7 +94,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 // the only suffixes allowed are (k == kilobytes) and (M == megabytes)
 // example when user passes: 20k toBytes returns 20000
 // example when user passes: 20M toBytes returns 20000000
-func toBytes(rateLimit string) (rateLimitBytes int64) {
+func ToBytes(rateLimit string) (rateLimitBytes int64) {
 	// 1k == 1000 bytes
 	// 1M == 1_000_000 bytes
 
@@ -116,7 +116,9 @@ func toBytes(rateLimit string) (rateLimitBytes int64) {
 		return 0
 	}
 
-	fmt.Println(suffix, sizeN)
+	if strings.TrimSpace(suffix) == "" {
+		return int64(sizeN)
+	}
 	if suffix == "k" {
 		return int64(sizeN * 1000)
 	} else if suffix == "M" {
