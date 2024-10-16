@@ -6,6 +6,36 @@ import (
 	"wget/ctx"
 )
 
+// TestToBytes is a test function for ToBytes function
+func TestToBytes(t *testing.T) {
+
+	tests := []struct {
+		name  string
+		input string
+		want  int64
+	}{
+		{"test1", "20k", 20_000},
+		{"test2", "20M", 20_000_000},
+		{"test3", "2", 2},
+		{"test4", "1KB", 0},
+		{"test5", "k", 0},
+		{"test6", "M", 0},
+		{"test7", "", 0},
+		{"test8", "200000000000M", 200_000_000_000_000_000},
+		{"test9", "1000k", 1_000_000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ToBytes(tt.input)
+			if got != tt.want {
+				t.Errorf("ToBytes(%q) got %d want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+
+}
+
 // TestIsPathFlag is a test function for IsPathFlag function
 func TestIsPathFlag(t *testing.T) {
 	tests := []struct {
