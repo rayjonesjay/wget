@@ -8,7 +8,7 @@ Usage: $ ./wget [OPTION] [URL]
 
 Try './wget --help' for more options.`
 
-	Manual = `wget 1.0.0, a non-interactive retriever.
+	Manual = `wget 1.1.0, a non-interactive retriever.
 Usage: ./wget [OPTION] [URL]
 
 Supported options as of version 1.0.0:
