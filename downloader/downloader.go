@@ -14,6 +14,7 @@ import (
 	"wget/ctx"
 	"wget/fetch"
 	"wget/mirror"
+	"wget/syscheck"
 	"wget/xerr"
 )
 
@@ -73,31 +74,31 @@ func Get(c ctx.Context) {
 	}
 }
 
+var width = syscheck.GetTerminalWidth()
+
 // Download handles normal downloads based on the provided URLs and other flags in the arg struct
 func (a *arg) Download() error {
+
+	successfulDownloads := make(chan string, len(a.Links))
 
 	var wg sync.WaitGroup
 	for _, url := range a.Links {
 		wg.Add(1)
-		go func() {
+		go func(url string) {
 			defer wg.Done()
-			//err := a.GetResource(url)
-			//if err != nil {
-			//	xerr.WriteError(err, 2, false)
-			//}
 
 			GetFile := func(downloadUrl string, header http.Header) (*os.File, error) {
 				outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
-				// open the output file for writing, create if it does not exist, truncate if it does exist.
 				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 			}
 
-			info, err := fetch.URL(url, fetch.Config{
+			_, err := fetch.URL(url, fetch.Config{
 				GetFile: GetFile,
 				Limit:   0,
 				ProgressListener: func(downloaded, total int64) {
-					// the total number of equal signs is 112
-					var barLength float64 = 112
+					// the size of the progress bar will be determined at runtime depending on terminal size, but default is 112 according to project requirements
+
+					var barLength float64 = float64(width) / 2
 
 					// filled tells us how many equal signs to print
 					progress := float64(downloaded) / float64(total)
@@ -113,8 +114,12 @@ func (a *arg) Download() error {
 
 					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", int(filled)), notFilledString)
 
-					// format and print the progress bar
-					a := fmt.Sprintf("\r%.2f / %.2f %s ", float64(downloaded), float64(total), bar)
+					percentage := (downloaded / total) * 100
+
+					// hide cusor visibility
+					fmt.Print("\033[?25l")
+
+					a := fmt.Sprintf("\r%.2f / %.2f %s %d%%  ", float64(downloaded), float64(total), bar, percentage)
 					fmt.Print(a)
 				},
 				RateListener: func(rate int32) {
@@ -126,18 +131,47 @@ func (a *arg) Download() error {
 			if err != nil {
 				fmt.Println(err)
 			} else {
-				fmt.Println(info)
+				successfulDownloads <- url
 			}
-		}()
+		}(url)
 	}
 
-	wg.Wait()
+	// wait for all go routines to finish in order to close the channel
+	go func() {
+		wg.Wait()
+		close(successfulDownloads)
+	}()
+	// Collect all successful downloads
+	var successList []string
+	for url := range successfulDownloads {
+		successList = append(successList, url)
+	}
+	if len(successList) != 0 {
+		// Print the successfully downloaded URLs
+		printUrls(successList)
+	}
+
+	// enable cusor visibility
+	fmt.Print("\033[?25h")
 	return nil
 }
 
-// CheckIfFileExists will check if fname exists in the provided path if it exists it will add an extension and append a number starting from 1 to the original filename
+// ETA calculates the downloaded data and current internet speed, the estimated time download finishes
+func ETA(total, downloaded, speed int64) int64 {
+
+	remainingTime := (total / downloaded) / speed
+
+	return remainingTime
+}
+
+// CheckIfFileExists will check if fname exists in the provided path if it exists it will add
+// a number starting from 1 between the filename and the beginning of extension
+// example: if file.txt exist CheckIfFileExist will generate a new name file1.txt. It does this iteratively.
 func CheckIfFileExists(fname string) string {
 
+	if strings.TrimSpace(fname) == "" {
+		return ""
+	}
 	// get the file extension
 	extension := filepath.Ext(fname)
 	base := fname
@@ -241,7 +275,7 @@ func printUrls(urls []string) {
 			res += url
 		}
 	}
-	fmt.Printf("Downloaded	[%s]\n", res)
+	fmt.Printf("\nDownloaded	[%s]\n", res)
 }
 
 // IsEmpty function checks whether an iterable is empty, an iterable is a string,array or slice.
@@ -299,32 +333,6 @@ func (a *arg) MirrorWeb() error {
 	return nil
 }
 
-//func (a *arg) downloadAndParseHTML(link, saveDir) error {
-//	{
-//	}
-//}
-
-// rejectFileBasedOnExtension method checks if a file should be downloaded based on
-// its file extension
-func (a *arg) rejectFileBasedOnExtension(url string) bool {
-	for _, ext := range a.Rejects {
-		if strings.HasSuffix(url, ext) {
-			return true
-		}
-	}
-	return false
-}
-
-// shouldExcludeDir method checks if an url belongs to an excluded directory
-func (a *arg) shouldExcludeDir(url string) bool {
-	for _, directory := range a.Exclude {
-		if strings.Contains(url, directory) {
-			return true
-		}
-	}
-	return false
-}
-
 func (a *arg) Get() (err error) {
 	if a.Mirror {
 		// run in mirror mode
@@ -335,12 +343,6 @@ func (a *arg) Get() (err error) {
 	}
 	return
 }
-
-//func (a *arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
-//	// replace href/src urls with local file paths
-//	// example: href="http://example.com/style.css" -> href="./style.css"
-//	return htmlCOncent
-//}
 
 // GetCurrentTime prints a textual representation of the current time, it takes isStart
 // if isStart is true it indicates the download process has started, if false means end of the current download
