@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
+	"slices"
 	"wget/fileio"
 	"wget/httpx"
 	"wget/limitedio"
@@ -16,10 +16,7 @@ import (
 
 const KiB = 1024
 
-var client = &http.Client{
-	// show some mercy on slow internet connections
-	Timeout: 30 * time.Second,
-}
+var client = &http.Client{}
 
 // headers our http client will send by default. Adapted from Chrome,
 // as some web servers will deny requests without a valid user agent
@@ -44,8 +41,9 @@ var headers = map[string]string{
 
 // FileInfo contains information from the server about the downloaded file from URL
 type FileInfo struct {
-	Name    string
-	Headers http.Header
+	Name       string
+	Headers    http.Header
+	StatusCode int
 }
 
 // Config contains configuration options for URL
@@ -72,6 +70,9 @@ type Config struct {
 	Body io.Reader
 	// Method holds the HTTP request method to use for the request, will default to GET if undefined
 	Method string
+	// AllowedStatusCodes keeps a list of all the status codes that are allowed for the given request.
+	//Any other status code will be considered an error
+	AllowedStatusCodes []int
 }
 
 // URL downloads the file from the given url, and saves it to the given file,
@@ -112,7 +113,13 @@ func URL(url string, config Config) (info FileInfo, err error) {
 	}
 	defer fileio.Close(resp.Body)
 
+	if config.AllowedStatusCodes != nil && !slices.Contains(config.AllowedStatusCodes, resp.StatusCode) {
+		err = fmt.Errorf("wrong status code: %v", resp.StatusCode)
+		return
+	}
+
 	info.Headers = resp.Header
+	info.StatusCode = resp.StatusCode
 	contentLength := httpx.ExtractContentLength(resp.Header)
 
 	// Create the output file

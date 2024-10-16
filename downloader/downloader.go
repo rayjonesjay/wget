@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"time"
 	"wget/ctx"
+	"wget/fetch"
+	"wget/mirror"
 	"wget/xerr"
 )
 
@@ -80,9 +81,52 @@ func (a *arg) Download() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := a.GetResource(url)
+			//err := a.GetResource(url)
+			//if err != nil {
+			//	xerr.WriteError(err, 2, false)
+			//}
+
+			GetFile := func(downloadUrl string, header http.Header) (*os.File, error) {
+				outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
+				// open the output file for writing, create if it does not exist, truncate if it does exist.
+				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+			}
+
+			info, err := fetch.URL(url, fetch.Config{
+				GetFile: GetFile,
+				Limit:   0,
+				ProgressListener: func(downloaded, total int64) {
+					// the total number of equal signs is 112
+					var barLength float64 = 112
+
+					// filled tells us how many equal signs to print
+					progress := float64(downloaded) / float64(total)
+
+					filled := (progress * barLength)
+					// not filled will represent the empty part thats not filled with equal signs
+					notFilled := barLength - filled
+
+					notFilledString := ""
+					if notFilled > 0 {
+						notFilledString = strings.Repeat(" ", int(notFilled))
+					}
+
+					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", int(filled)), notFilledString)
+
+					// format and print the progress bar
+					a := fmt.Sprintf("\r%.2f / %.2f %s ", float64(downloaded), float64(total), bar)
+					fmt.Print(a)
+				},
+				RateListener: func(rate int32) {
+				},
+				Body:               nil,
+				Method:             "GET",
+				AllowedStatusCodes: []int{http.StatusOK},
+			})
 			if err != nil {
-				xerr.WriteError(err, 2, false)
+				fmt.Println(err)
+			} else {
+				fmt.Println(info)
 			}
 		}()
 	}
@@ -228,19 +272,23 @@ func (a *arg) IsEmpty(data interface{}) bool {
 func (a *arg) MirrorWeb() error {
 
 	for _, link := range a.Links {
-		parsedUrl, err := url.Parse(link)
+		err := mirror.Site(*a.Context, link)
 		if err != nil {
 			return err
 		}
-
-		// by default the downloaded data will be saved to the name of domain if not specified
-		domain := parsedUrl.Host
-		directoryToSaveData := filepath.Join(a.SavePath, domain)
-
-		err = os.MkdirAll(directoryToSaveData, 0755)
-		if err != nil {
-			return err
-		}
+		//parsedUrl, err := url.Parse(link)
+		//if err != nil {
+		//	return err
+		//}
+		//
+		//// by default the downloaded data will be saved to the name of domain if not specified
+		//domain := parsedUrl.Host
+		//directoryToSaveData := filepath.Join(a.SavePath, domain)
+		//
+		//err = os.MkdirAll(directoryToSaveData, 0755)
+		//if err != nil {
+		//	return err
+		//}
 
 		// Download and parse the HTML/CSS
 		//err = a.downloadAndParseHTML(link, directoryToSaveData)
