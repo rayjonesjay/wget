@@ -23,6 +23,8 @@ var (
 
 	// ErrWrongPath is returned when a given path isn't a valid location in the filesystem
 	ErrWrongPath = errors.New("invalid path")
+
+	ErrRelativeURL = errors.New("relative path")
 )
 
 // WriteError takes errorMessage of any type and statusCode
@@ -35,5 +37,4 @@ func WriteError(errorMessage interface{}, statusCode int, shouldExit bool) {
 	if shouldExit {
 		os.Exit(statusCode)
 	}
-	return
 }

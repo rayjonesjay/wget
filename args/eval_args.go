@@ -141,12 +141,12 @@ func ReadUrlFromFile(fpath string) (links []string, err error) {
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		link := strings.TrimSpace(scanner.Text())
-		ok, err := xurl.IsValidURL(link)
+		lnk, ok, err := xurl.IsValidURL(link)
 		if err != nil {
 			xerr.WriteError(err, 1, true)
 		}
 		if ok {
-			links = append(links, link)
+			links = append(links, lnk)
 		}
 	}
 	return links, nil
