@@ -90,7 +90,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 	return
 }
 
-// toBytes converts a rateLimit in string format to bytes, if no suffix is supplied then the value is considered in bytes
+// ToBytes converts a rateLimit in string format to bytes, if no suffix is supplied then the value is considered in bytes
 // the only suffixes allowed are (k == kilobytes) and (M == megabytes)
 // example when user passes: 20k toBytes returns 20000
 // example when user passes: 20M toBytes returns 20000000
