@@ -195,10 +195,3 @@ func IsPathFlag(s string) (bool, string) {
 	}
 	return true, matches[1]
 }
-
-// IsHelpFlag checks whether an argument passed through the command line is --help, for displaying the help manual
-func IsHelpFlag(s string) bool {
-	pat := `^--help$`
-	re := regexp.MustCompile(pat)
-	return re.MatchString(s)
-}
