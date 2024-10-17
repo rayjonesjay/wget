@@ -107,34 +107,71 @@ Here are the available flags for the WGET utility:
 
 ## Usage
 
-To get started with the WGET utility, follow these commands:
+### Prerequisites
 
-### Download a Single File
+Before using this WGET utility, ensure that Go is installed on your system. If not, follow these steps:
+
+1. **Install Go**
+
+Visit the [Go official website]("https://golang.org/dl/) and download the latest version suitable for your operating system. Follow the installation instructions for your OS.
+
+2. **Verify Go Installation** 
+
+After installation, verify that Go is properly set up by running the following command:
+
+```bash
+$ go version
+```
+
+You should see the installed version of Go in the output.
+
+
+### Setup and Installation 
+
+1. **Clone the Repository**
+  
+  Clone the wget repository to your local machine:
+  ```bash
+   $ git clone https://learn.zone01kisumu.ke/git/ramuiruri/wget
+```
+2. **Navigate to the Project directory
+
+Change into the cloned repository directory and install necessary dependencies
+```bash
+$ cd wget
+$ go mod tidy
+```
+
+### Running the utility
+
+Now that the project is set up you can start using the wget utility
+
+####  Download a Single File
 ```bash
 $ go run . https://example.com/file.zip
 ```
 
-### Download and Save with a Specific Name
+#### Download and Save with a Specific Name
 ```bash
 $ go run . -O=newfile.zip https://example.com/file.zip
 ```
 
-### Download to a Specific Directory
+#### Download to a Specific Directory
 ```bash
 $ go run . -P=~/Downloads/ https://example.com/file.zip
 ```
 
-### Limit Download Speed
+#### Limit Download Speed
 ```bash
 $ go run . --rate-limit=500k https://example.com/largefile.zip
 ```
 
-### Download Multiple Files Asynchronously
+#### Download Multiple Files Asynchronously
 ```bash
 $ go run . -i=links.txt
 ```
 
-### Mirror a Website
+#### Mirror a Website
 ```bash
 $ go run . --mirror https://example.com
 ```
