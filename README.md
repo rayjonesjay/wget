@@ -1,9 +1,10 @@
 # WGET
 
-WGET is a utility that is used for non-interactive downloads over the net.
+WGET is a utility that recreates some of the core functionalities of the original GNU Wget using Go. It is designed for non-interactive downloads from the web and includes several features such as downloading single or multiple files, limiting download speed, and mirroring entire websites.
 
 ## Project Structure
-```
+
+```plaintext
 .
 ├── args
 │   ├── eval_args.go
@@ -46,63 +47,111 @@ WGET is a utility that is used for non-interactive downloads over the net.
 13 directories, 25 files
 ```
 
-## Functionalities
-1. Downloading a file given an URL-(Uniform Resource Locator) parsed through the command line.
+## Features
 
-For example:
+1. **Download a file via URL**  
+   Command-line argument accepts a URL to download a file from the web.
+   ```bash
+   $ go run . URL
+   ```
+
+2. **Download and save under a different name**  
+   You can specify a custom file name using the `-O` flag.
+   ```bash
+   $ go run . -O=file_name URL
+   ```
+
+3. **Download and save to a different directory**  
+   Use `-P` flag to specify a directory for saving the file.
+   ```bash
+   $ go run . -P=path/to/save URL
+   ```
+
+4. **Limit download speed**  
+   Control the download speed using the `--rate-limit` flag. The suffix `k` and `M` are used for kilobytes and megabytes, respectively.
+   ```bash
+   $ go run . --rate-limit=100k URL
+   $ go run . --rate-limit=200M URL
+   ```
+
+5. **Download in background**  
+   The `--background` flag allows the download to proceed in the background.
+   ```bash
+   $ go run . --background URL
+   ```
+
+6. **Download multiple files asynchronously**  
+   The `-i` flag reads a file containing multiple URLs and downloads them concurrently.
+   ```bash
+   $ go run . -i=path/to/file/with/links
+   ```
+
+7. **Mirror an entire website**  
+   The `--mirror` flag downloads an entire website for offline use.
+   ```bash
+   $ go run . --mirror URL
+   ```
+
+## Flags
+
+Here are the available flags for the WGET utility:
+
+- `-O`: Specify the output file name for the downloaded file.
+- `-P`: Specify the directory where the file should be saved.
+- `--rate-limit`: Limit the download speed. Use `k` for kilobytes and `M` for megabytes.
+- `-i`: Download multiple files by reading URLs from a file.
+- `--mirror`: Mirror an entire website.
+- `-B`: Download in the background and save logs to `wget-log`.
+- `--background`: Download in the background (similar to `-B`).
+
+
+## Usage
+
+To get started with the WGET utility, follow these commands:
+
+### Download a Single File
+```bash
+$ go run . https://example.com/file.zip
 ```
-$ go run . URL
+
+### Download and Save with a Specific Name
+```bash
+$ go run . -O=newfile.zip https://example.com/file.zip
 ```
 
-2. Downloading a single file and saving it under a different name.
-
-For example:
-```
-$ go run . -O=file_name URL
+### Download to a Specific Directory
+```bash
+$ go run . -P=~/Downloads/ https://example.com/file.zip
 ```
 
-3. Downloading and saving the file in a different path.
-
-For example:
-```
-$ go run . -P=path/to/save URL
+### Limit Download Speed
+```bash
+$ go run . --rate-limit=500k https://example.com/largefile.zip
 ```
 
-4. Set the download speed, limiting the rate speed of a download. Only **k** and **M** for kilo bytes and Mega bytes respectively are allowed if k or M not used as suffix then the value is assumed as bytes per second.
-
-For example:
-```
-$ go run . --rate-limit=100k URL
-$ go run . --rate-limit=200M URL
+### Download Multiple Files Asynchronously
+```bash
+$ go run . -i=links.txt
 ```
 
-5. Downloading file in background.
-
-For example:
-```
-$ go run . --background URL
+### Mirror a Website
+```bash
+$ go run . --mirror https://example.com
 ```
 
-6. Downloading multiple files at same time, reading a file containing multiple download links asynchronously.
+## Contribution
 
-For example:
-```
-$ go run . -i=path/to/file/with/links
-```
+We welcome contributions to improve this project! If you wish to contribute:
 
-7. Main Feature will be to download an entire website also known as mirror.
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Commit your changes (`git commit -am 'Add new feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Create a pull request.
 
-For example:
-```
-$ go run . --mirror URL
-```
+Make sure your code adheres to the coding standards and passes all tests before submitting the pull request.
 
+## License
 
-### Authors
-* [**ramuiruri**](https://learn.zone01kisumu.ke/git/ramuiruri)
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
-* [najwang](https://learn.zone01kisumu.ke/git/najwang)
-
-* [wyonyango](https://learn.zone01kisumu.ke/git/wyonyango)
-
-* [shfana](https://learn.zone01kisumu.ke/git/shfana)
