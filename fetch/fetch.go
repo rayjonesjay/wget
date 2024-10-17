@@ -90,7 +90,7 @@ var m sync.Mutex
 // URL downloads the file from the given url, and saves it to the given file,
 // respecting the given speed limit; i.e., the download speed never exceeds `limit` bytes/second
 func URL(url string, config Config) (info FileInfo, err error) {
-	var Status = DownloadStatus{}
+	Status := &DownloadStatus{}
 
 	m.Lock()
 	Status.Start = syscheck.GetCurrentTime(true)
