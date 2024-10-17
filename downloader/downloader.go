@@ -78,11 +78,13 @@ var width = syscheck.GetTerminalWidth()
 
 // Download handles normal downloads based on the provided URLs and other flags in the arg struct
 func (a *arg) Download() error {
-
+	var m sync.Mutex
 	successfulDownloads := make(chan string, len(a.Links))
 
 	var wg sync.WaitGroup
-	for _, url := range a.Links {
+	syscheck.ClearScreen()      //clear screen before download begins
+	defer syscheck.ShowCursor() // show the cursor if the download is finished
+	for lineNumber, url := range a.Links {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
@@ -113,14 +115,18 @@ func (a *arg) Download() error {
 					}
 
 					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", int(filled)), notFilledString)
-
 					percentage := (downloaded / total) * 100
 
 					// hide cusor visibility
 					fmt.Print("\033[?25l")
 
 					a := fmt.Sprintf("\r%.2f / %.2f %s %d%%  ", float64(downloaded), float64(total), bar, percentage)
-					fmt.Print(a)
+					if width >= 65 {
+						m.Lock()                            // Since each routine is accessing the terminal we need to lock it to prevent race conditions
+						syscheck.MoveCursor(lineNumber + 5) // each download gets a size of 5 lines to print its output
+						fmt.Print(a)
+						m.Unlock()
+					}
 				},
 				RateListener: func(rate int32) {
 				},
