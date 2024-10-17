@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
 	"wget/xerr"
 )
@@ -69,4 +70,19 @@ func ShowCursor() {
 // ClearScreen clears the terminal screen.
 func ClearScreen() {
 	fmt.Print("\033[2J")
+}
+
+// GetCurrentTime prints a textual representation of the current time, it takes isStart
+// if isStart is true it indicates the download process has started, if false means end of the current download
+func GetCurrentTime(isStart bool) string {
+	// Get the current time
+	currentTime := time.Now()
+
+	// Format time to print up to seconds
+	formattedTime := currentTime.Format("2006-01-02 15:04:05")
+
+	if isStart {
+		return fmt.Sprintf("start at %s", formattedTime)
+	}
+	return fmt.Sprintf("finished at %s", formattedTime)
 }
