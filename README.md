@@ -2,6 +2,19 @@
 
 WGET is a utility that recreates some of the core functionalities of the original GNU Wget using Go. It is designed for non-interactive downloads from the web and includes several features such as downloading single or multiple files, limiting download speed, and mirroring entire websites.
 
+## Table of Contents
+
+- [Project Structure](#project-structure)
+- [Features](#features)
+- [Flags](#flags)
+- [Usage](#usage)
+  - [Prerequisites](#prerequisites)
+  - [Setup and Installation](#setup-and-installation)
+  - [Running the Utility](#running-the-utility)
+- [Contribution](#contribution)
+-[Authors](#authors)
+- [License](#license)
+
 ## Project Structure
 
 ```plaintext
@@ -34,9 +47,6 @@ WGET is a utility that recreates some of the core functionalities of the origina
 ├── mirror
 │   └── mirror.go
 ├── README.md
-├── syscheck
-│   ├── system.go
-│   └── system_test.go
 ├── TESTS.md
 ├── xerr
 │   └── xerr.go
@@ -97,13 +107,39 @@ WGET is a utility that recreates some of the core functionalities of the origina
 Here are the available flags for the WGET utility:
 
 - `-O`: Specify the output file name for the downloaded file.
-- `-P`: Specify the directory where the file should be saved.
-- `--rate-limit`: Limit the download speed. Use `k` for kilobytes and `M` for megabytes.
-- `-i`: Download multiple files by reading URLs from a file.
-- `--mirror`: Mirror an entire website.
-- `-B`: Download in the background and save logs to `wget-log`.
-- `--background`: Download in the background (similar to `-B`).
+  ```bash
+  $ go run . -O=filename URL
+  ```
 
+- `-P`: Specify the directory where the file should be saved.
+  ```bash
+  $ go run . -P=directory/ URL
+  ```
+
+- `--rate-limit`: Limit the download speed. Use `k` for kilobytes and `M` for megabytes.
+  ```bash
+  $ go run . --rate-limit=500k URL
+  ```
+
+- `-i`: Download multiple files by reading URLs from a file.
+  ```bash
+  $ go run . -i=links.txt
+  ```
+
+- `--mirror`: Mirror an entire website.
+  ```bash
+  $ go run . --mirror URL
+  ```
+
+- `-B`: Download in the background and save logs to `wget-log`.
+  ```bash
+  $ go run . -B URL
+  ```
+
+- `--background`: Download in the background (similar to `-B`).
+  ```bash
+  $ go run . --background URL
+  ```
 
 ## Usage
 
@@ -111,42 +147,41 @@ Here are the available flags for the WGET utility:
 
 Before using this WGET utility, ensure that Go is installed on your system. If not, follow these steps:
 
-1. **Install Go**
+1. **Install Go**  
+   Visit the [Go official website](https://golang.org/dl/) and download the latest version suitable for your operating system. Follow the installation instructions for your OS.
 
-Visit the [Go official website]("https://golang.org/dl/) and download the latest version suitable for your operating system. Follow the installation instructions for your OS.
+2. **Verify Go Installation**  
+   After installation, verify that Go is properly set up by running the following command:
+   ```bash
+   $ go version
+   ```
+   You should see the installed version of Go in the output.
 
-2. **Verify Go Installation** 
+### Setup and Installation
 
-After installation, verify that Go is properly set up by running the following command:
+1. **Clone the Repository**  
+   Clone this WGET repository to your local machine:
+   ```bash
+   $ git clone https://github.com/your-username/wget-go.git
+   ```
 
-```bash
-$ go version
-```
+2. **Navigate into the Project Directory**  
+   Change into the cloned repository directory:
+   ```bash
+   $ cd wget-go
+   ```
 
-You should see the installed version of Go in the output.
+3. **Install Dependencies**  
+   Run the following command to install any necessary dependencies:
+   ```bash
+   $ go mod tidy
+   ```
 
+### Running the Utility
 
-### Setup and Installation 
+Now that the project is set up, you can start using the WGET utility:
 
-1. **Clone the Repository**
-  
-  Clone the wget repository to your local machine:
-  ```bash
-   $ git clone https://learn.zone01kisumu.ke/git/ramuiruri/wget
-```
-2. **Navigate to the Project directory
-
-Change into the cloned repository directory and install necessary dependencies
-```bash
-$ cd wget
-$ go mod tidy
-```
-
-### Running the utility
-
-Now that the project is set up you can start using the wget utility
-
-####  Download a Single File
+#### Download a Single File
 ```bash
 $ go run . https://example.com/file.zip
 ```
@@ -188,7 +223,7 @@ We welcome contributions to improve this project! If you wish to contribute:
 
 Make sure your code adheres to the coding standards and passes all tests before submitting the pull request.
 
-
+##Authors
 ### Authors
 * [**ramuiruri**](https://learn.zone01kisumu.ke/git/ramuiruri)
 
@@ -201,4 +236,3 @@ Make sure your code adheres to the coding standards and passes all tests before 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
