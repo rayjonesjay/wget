@@ -8,10 +8,16 @@ Usage: $ ./wget [OPTION] [URL]
 
 Try './wget --help' for more options.`
 
-	Manual = `wget 1.0.0, a non-interactive retriever.
+	Manual = `wget 1.0.1, a non-interactive retriever.
+
+
 Usage: ./wget [OPTION] [URL]
 
-Supported options as of version 1.0.0:
+or 
+
+go run  .  [OPTION] [URL]
+
+Supported options as of version 1.0.1:
 
 FLAG:				 USAGE:						EXPLANATION:
 
@@ -25,8 +31,8 @@ FLAG:				 USAGE:						EXPLANATION:
 -i  				-i=FILE						allow download of resource by reading links stored in a file
 
 
-bug reports, questions, issues to https://github.com/rayjonesjay
+bug reports, questions, issues to https://github.com/rayjonesjay,  https://github.com/Wambita/
 `
 
-	Version = "1.0.0"
+	Version = "1.0.1"
 )
