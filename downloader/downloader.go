@@ -3,7 +3,6 @@ package downloader
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,7 +14,6 @@ import (
 	"wget/fetch"
 	"wget/mirror"
 	"wget/syscheck"
-	"wget/xerr"
 )
 
 // arg represents the commandline arguments passed through the command line by the user
@@ -26,32 +24,6 @@ import (
 type arg struct {
 	*ctx.Context
 }
-
-const (
-	// KB Size of Data in KiloBytes
-	KB = 1000 * 1
-
-	// KiB Size of Data in KibiBytes, same as 2^10
-	KiB = 1 << (10 * 1)
-
-	// MB Size of Data in MegaBytes
-	MB = 1000 * KB
-
-	// MiB Size of Data in MebiBytes, same as 2^20
-	MiB = 1 << 20
-
-	// GB Size of Data in GigaBytes
-	GB = 1000 * MB
-
-	// GiB Size of Data in GibiBytes, same as 2^30
-	GiB = 1 << 30
-
-	// TB Size of Data in TeraBytes
-	TB = 1000 * GB
-
-	// TiB Size of Data in TebiBytes, same as 2^40
-	TiB = 1 << 40
-)
 
 var (
 	// DefaultDownloadDirectory is the default location where files retrieved will reside.
@@ -75,22 +47,29 @@ func Get(c ctx.Context) {
 }
 
 var width = syscheck.GetTerminalWidth()
+var mu sync.Mutex
 
-// Download handles normal downloads based on the provided URLs and other flags in the arg struct
+// Download handles each download and prints progress across 6 lines.
 func (a *arg) Download() error {
-	var m sync.Mutex
+	var wg sync.WaitGroup
+
 	successfulDownloads := make(chan string, len(a.Links))
 
-	var wg sync.WaitGroup
-	syscheck.ClearScreen()      //clear screen before download begins
-	defer syscheck.ShowCursor() // show the cursor if the download is finished
+	syscheck.ClearScreen()
+	syscheck.HideCursor()
+	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
+
 	for lineNumber, url := range a.Links {
+
 		wg.Add(1)
-		go func(url string) {
+		go func(url string, rowOffset int) {
 			defer wg.Done()
 
+			startTime := time.Now()
+
+			outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
+
 			GetFile := func(downloadUrl string, header http.Header) (*os.File, error) {
-				outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
 				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 			}
 
@@ -98,48 +77,46 @@ func (a *arg) Download() error {
 				GetFile: GetFile,
 				Limit:   0,
 				ProgressListener: func(downloaded, total int64) {
-					// the size of the progress bar will be determined at runtime depending on terminal size, but default is 112 according to project requirements
-
-					var barLength float64 = float64(width) / 2
-
-					// filled tells us how many equal signs to print
 					progress := float64(downloaded) / float64(total)
-
-					filled := (progress * barLength)
-					// not filled will represent the empty part thats not filled with equal signs
+					barLength := width / 3
+					filled := int(progress * float64(barLength))
 					notFilled := barLength - filled
 
-					notFilledString := ""
-					if notFilled > 0 {
-						notFilledString = strings.Repeat(" ", int(notFilled))
-					}
+					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", filled), strings.Repeat(" ", notFilled))
+					percentage := (downloaded * 100) / total
+					eta := CalculateETA(downloaded, total, time.Since(startTime))
 
-					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", int(filled)), notFilledString)
-					percentage := (downloaded / total) * 100
-
-					// hide cusor visibility
-					fmt.Print("\033[?25l")
-
-					a := fmt.Sprintf("\r%.2f / %.2f %s %d%%  ", float64(downloaded), float64(total), bar, percentage)
-					if width >= 65 {
-						m.Lock()                            // Since each routine is accessing the terminal we need to lock it to prevent race conditions
-						syscheck.MoveCursor(lineNumber + 5) // each download gets a size of 5 lines to print its output
-						fmt.Print(a)
-						m.Unlock()
-					}
+					mu.Lock() // Avoid race conditions on terminal output
+					PrintLines(rowOffset, []string{
+						fetch.Status.Start,
+						fetch.Status.Status + fmt.Sprintf("%d", fetch.Status.StatusCode),
+						fetch.Status.ContentLength,
+						fmt.Sprintf("saving file to: %s", outputFilePath),
+						fmt.Sprintf("%s / %s %s %d%% %s", formatSize(downloaded), formatSize(total), bar, percentage, eta),
+					})
+					mu.Unlock()
 				},
-				RateListener: func(rate int32) {
-				},
+				RateListener:       func(rate int32) {},
 				Body:               nil,
 				Method:             "GET",
 				AllowedStatusCodes: []int{http.StatusOK},
 			})
+
 			if err != nil {
-				fmt.Println(err)
+				mu.Lock()
+				PrintLines(rowOffset+7, []string{
+					fmt.Sprintf("Error: %s", err.Error()),
+				})
+				mu.Unlock()
 			} else {
 				successfulDownloads <- url
+				mu.Lock()
+				PrintLines(rowOffset+5, []string{
+					syscheck.GetCurrentTime(false),
+				})
+				mu.Unlock()
 			}
-		}(url)
+		}(url, lineNumber*7) // Reserve 7 lines per download
 	}
 
 	// wait for all go routines to finish in order to close the channel
@@ -157,17 +134,37 @@ func (a *arg) Download() error {
 		printUrls(successList)
 	}
 
-	// enable cusor visibility
 	fmt.Print("\033[?25h")
 	return nil
 }
 
-// ETA calculates the downloaded data and current internet speed, the estimated time download finishes
-func ETA(total, downloaded, speed int64) int64 {
+// PrintLines prints multiple lines of text starting from a specific row.
+func PrintLines(baseRow int, lines []string) {
+	for i, line := range lines {
+		syscheck.MoveCursor(baseRow + i)
+		fmt.Print("\r", line)
+	}
+}
 
-	remainingTime := (total / downloaded) / speed
+// CalculateETA estimates the time left for a download.
+func CalculateETA(downloaded, total int64, elapsed time.Duration) string {
+	if downloaded == 0 {
+		return "calculating..."
+	}
+	rate := float64(downloaded) / elapsed.Seconds()
+	remaining := float64(total-downloaded) / rate
+	return formattedTime(int64(remaining)) // Just return the formatted time.
+}
 
-	return remainingTime
+// Format time into a human-readable string.
+func formattedTime(seconds int64) string {
+	if seconds >= 3600 {
+		return fmt.Sprintf("%d h", seconds/3600)
+	} else if seconds >= 60 {
+		return fmt.Sprintf("%d m", seconds/60)
+	} else {
+		return fmt.Sprintf("%d s", seconds)
+	}
 }
 
 // CheckIfFileExists will check if fname exists in the provided path if it exists it will add
@@ -195,50 +192,6 @@ func CheckIfFileExists(fname string) string {
 		fname = fmt.Sprintf("%s%d%s", base, n, extension)
 		n++
 	}
-}
-
-// GetResource takes an url to a resource and attempts to fetch the specified resource, if an error occurs err is returned
-func (a *arg) GetResource(url string) (err error) {
-	outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
-	// open the output file for writing, create if it does not exist, truncate if it does exist.
-	outFile, err := os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE, 0644)
-
-	if err != nil {
-		return fmt.Errorf("failed to open file for writing %w: %s", err, url)
-	}
-	defer outFile.Close()
-
-	fmt.Println(GetCurrentTime(true))
-
-	client := &http.Client{
-		Timeout: time.Second * 10,
-	}
-
-	fmt.Print("\rsending request, awaiting response...")
-	resp, err := client.Get(url)
-	if err != nil {
-		xerr.WriteError(err, 2, false)
-	}
-
-	fmt.Printf("\rsending request, awaiting response... %d %s\n", resp.StatusCode, http.StatusText(resp.StatusCode))
-
-	if err != nil {
-		return fmt.Errorf("failed to download %s: %w", url, err)
-	}
-
-	defer resp.Body.Close()
-
-	n, err := io.Copy(outFile, resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to save URL %s to file %w", url, err)
-	}
-	r, _ := client.Head(url)
-	contentSizeMB := RoundOfSizeOfData(r.ContentLength)
-
-	fmt.Printf("\rcontent size: %d [~%s]\n", n, contentSizeMB)
-
-	fmt.Println(GetCurrentTime(false))
-	return nil
 }
 
 /*
@@ -350,34 +303,22 @@ func (a *arg) Get() (err error) {
 	return
 }
 
-// GetCurrentTime prints a textual representation of the current time, it takes isStart
-// if isStart is true it indicates the download process has started, if false means end of the current download
-func GetCurrentTime(isStart bool) string {
-	// Get the current time
-	currentTime := time.Now()
+// Helper function to format byte size
+func formatSize(size int64) string {
+	const (
+		KB = 1 << 10
+		MB = 1 << 20
+		GB = 1 << 30
+	)
 
-	// Format time to print up to seconds
-	formattedTime := currentTime.Format("2006-01-02 15:04:05")
-
-	if isStart {
-		return fmt.Sprintf("start at %s", formattedTime)
+	switch {
+	case size >= GB:
+		return fmt.Sprintf("%.2f GiB", float64(size)/GB)
+	case size >= MB:
+		return fmt.Sprintf("%.2f MiB", float64(size)/MB)
+	case size >= KB:
+		return fmt.Sprintf("%.2f KiB", float64(size)/KB)
+	default:
+		return fmt.Sprintf("%d B", size)
 	}
-	return fmt.Sprintf("finished at %s", formattedTime)
-}
-
-// RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
-func RoundOfSizeOfData(dataInBytes int64) string {
-	var size float64
-	var unit string
-	if dataInBytes >= GB {
-		size = float64(dataInBytes) / GB
-		unit = "GB"
-	} else if dataInBytes >= KB {
-		size = float64(dataInBytes) / MB
-		unit = "MB"
-	} else {
-		size = float64(dataInBytes)
-		unit = "KB"
-	}
-	return fmt.Sprintf("%.2f%s", size, unit)
 }
