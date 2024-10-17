@@ -188,6 +188,16 @@ We welcome contributions to improve this project! If you wish to contribute:
 
 Make sure your code adheres to the coding standards and passes all tests before submitting the pull request.
 
+
+### Authors
+* [**ramuiruri**](https://learn.zone01kisumu.ke/git/ramuiruri)
+
+* [najwang](https://learn.zone01kisumu.ke/git/najwang)
+
+* [wyonyango](https://learn.zone01kisumu.ke/git/wyonyango)
+
+* [shfana](https://learn.zone01kisumu.ke/git/shfana)
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
