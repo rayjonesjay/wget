@@ -107,39 +107,12 @@ WGET is a utility that recreates some of the core functionalities of the origina
 Here are the available flags for the WGET utility:
 
 - `-O`: Specify the output file name for the downloaded file.
-  ```bash
-  $ go run . -O=filename URL
-  ```
-
 - `-P`: Specify the directory where the file should be saved.
-  ```bash
-  $ go run . -P=directory/ URL
-  ```
-
 - `--rate-limit`: Limit the download speed. Use `k` for kilobytes and `M` for megabytes.
-  ```bash
-  $ go run . --rate-limit=500k URL
-  ```
-
 - `-i`: Download multiple files by reading URLs from a file.
-  ```bash
-  $ go run . -i=links.txt
-  ```
-
 - `--mirror`: Mirror an entire website.
-  ```bash
-  $ go run . --mirror URL
-  ```
-
 - `-B`: Download in the background and save logs to `wget-log`.
-  ```bash
-  $ go run . -B URL
-  ```
-
 - `--background`: Download in the background (similar to `-B`).
-  ```bash
-  $ go run . --background URL
-  ```
 
 ## Usage
 
