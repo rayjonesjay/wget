@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"sync"
 	"wget/fileio"
 	"wget/httpx"
 	"wget/limitedio"
+	"wget/syscheck"
 )
 
 const KiB = 1024
@@ -75,9 +77,25 @@ type Config struct {
 	AllowedStatusCodes []int
 }
 
+type DownloadStatus struct {
+	StatusCode    int
+	Status        string
+	Start         string
+	End           string
+	ContentLength string
+}
+
+var m sync.Mutex
+
 // URL downloads the file from the given url, and saves it to the given file,
 // respecting the given speed limit; i.e., the download speed never exceeds `limit` bytes/second
 func URL(url string, config Config) (info FileInfo, err error) {
+	var Status = DownloadStatus{}
+
+	m.Lock()
+	Status.Start = syscheck.GetCurrentTime(true)
+
+	m.Unlock()
 	{ // sanity checks on the configuration
 		if config.GetFile == nil {
 			err = errors.New("bad config: function `GetFile` is required")
@@ -105,7 +123,11 @@ func URL(url string, config Config) (info FileInfo, err error) {
 	// Set the default client headers, including user agent
 	setClientHeaders(&req.Header)
 
+	m.Lock()
 	// Send the request
+	Status.Status = "\rsending request, awaiting response..."
+	m.Unlock()
+
 	resp, err := client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("failed to download file: %v", err)
@@ -113,15 +135,24 @@ func URL(url string, config Config) (info FileInfo, err error) {
 	}
 	defer fileio.Close(resp.Body)
 
+	m.Lock()
+	Status.StatusCode = resp.StatusCode
+	Status.Status = fmt.Sprintf("\rsending request, awaiting response... %d %s\n", Status.StatusCode, Status.Status)
+	m.Unlock()
 	if config.AllowedStatusCodes != nil && !slices.Contains(config.AllowedStatusCodes, resp.StatusCode) {
 		err = fmt.Errorf("wrong status code: %v", resp.StatusCode)
 		return
 	}
 
 	info.Headers = resp.Header
-	info.StatusCode = resp.StatusCode
-	contentLength := httpx.ExtractContentLength(resp.Header)
 
+	m.Lock()
+	info.StatusCode = resp.StatusCode
+	m.Unlock()
+	// m.Lock()
+	contentLength := httpx.ExtractContentLength(resp.Header)
+	Status.ContentLength = fmt.Sprintf("\rcontent size: %d [~%s]\n", contentLength, httpx.RoundOfSizeOfData(contentLength))
+	// m.Unlock()
 	// Create the output file
 	file, err := config.GetFile(url, resp.Header)
 	if err != nil {
@@ -173,7 +204,9 @@ func URL(url string, config Config) (info FileInfo, err error) {
 
 		config.ProgressListener(downloadedBytes, contentLength)
 	}
-
+	m.Lock()
+	Status.End = syscheck.GetCurrentTime(false)
+	m.Unlock()
 	return info, nil
 }
 
