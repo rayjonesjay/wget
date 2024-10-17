@@ -27,7 +27,9 @@ type terminal struct {
 }
 
 // GetTerminalWidth retrieves the width of the terminal at runtime, this this is because in order to print the progress bar to the terminal
-// the terminal width must be at least twice the progress bar.
+//
+//	width must be at least twice the progress bar.
+//
 // syscall.Syscall uses SYS_IOCTL syscall to retrieve terminal dimensions by interacting with stdin (file descriptor 0)
 // TIOCGWINSZ is a Unix ioctl (input output control) command that gets the terminal's rows and columns.
 // terminal holds the dimensions of the terminal. but we are only interested in the Col field, which stores the column
