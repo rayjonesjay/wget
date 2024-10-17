@@ -1,7 +1,6 @@
 
-# Testing Resources Documentation
-
-This document outlines how to use the provided links to carry out various tests. The resources include images, text files, and downloadable files from both the internet and local servers.
+# Tests
+We have provided  links to test  the  WGET program. It has various types of resources, including images, text files, and downloadable files. Each category of resource is provided to help verify the program's functionality.
 
 ## Table of Contents
 
@@ -15,20 +14,20 @@ This document outlines how to use the provided links to carry out various tests.
 
 ## Overview
 
-This documentation serves as a guide for using specific links to conduct tests. Each type of resource is categorized for ease of access.
+This document serves as a guide for using specific links to verify if your WGET program can handle different types of resources correctly. By using these links, you can ensure that your program is functioning as intended and can manage various content types from both the internet and a local server.
 
 ## Testing Internet Links
 
 ### Images
 
-To test image accessibility, you can copy and paste the following link into your web browser:
+To test if your WGET program can correctly download and handle image links, use the following link:
 ```
 https://pbs.twimg.com/media/EMtmPFLWkAA8CIS.jpg
 ```
 
 ### Text Files
 
-To test text file retrieval, copy and paste the links below into your browser:
+To verify if your program can retrieve text files from the internet, use the following links:
 ```
 https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-art/thinkertoy.txt
 https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-art/shadow.txt
@@ -37,7 +36,7 @@ https://learn.zone01kisumu.ke/git/root/public/raw/branch/master/subjects/ascii-a
 
 ### ZIP Files
 
-For testing file downloads, use the following ZIP file links. Copy and paste them to download and verify the contents:
+For testing if your WGET program can download and handle ZIP files, try the following links:
 ```
 http://ipv4.download.thinkbroadband.com/20MB.zip
 http://ipv4.download.thinkbroadband.com/10MB.zip
@@ -45,11 +44,7 @@ http://ipv4.download.thinkbroadband.com/10MB.zip
 
 ## Testing Localhost Links
 
-Localhost links allow you to access resources hosted on your machine. Ensure that your local server is up and running to conduct these tests.
-
-- Verify your local server is active.
-- Copy and paste the following links into your browser:
-
+To check if your program can handle links from a local server, make sure your local server is running, then use the following links:
 ```
 http://127.0.0.1:1024/guess-it-dockerized.zip
 http://127.0.0.1:1024/sublime_text_build_4169_x64.tar.xz
@@ -58,8 +53,9 @@ http://127.0.0.1:34277
 
 ## Conclusion
 
-- **Follow the links** to conduct tests on various resources.
-- **Internet links** provide direct access to images, text files, and downloadable ZIP files.
-- **Localhost links** require an active server for testing.
+- **Use the provided links** to test your WGET program's ability to handle different types of resources effectively.
+- Ensure that your program can successfully download and manage image files, text documents, and ZIP archives from the internet.
+- Check the functionality of local server links to assess how well your program handles localhost resources.
 
-By utilizing these resources effectively, you can perform a variety of tests as needed.
+
+
