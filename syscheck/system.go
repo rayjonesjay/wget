@@ -2,6 +2,7 @@ package syscheck
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
@@ -45,4 +46,25 @@ func GetTerminalWidth() int {
 		xerr.WriteError("terminal size to small adjust width to at least 65", 1, true)
 	}
 	return int(width)
+}
+
+// MoveCursor moves the terminal cursor to the specified row, we don't need columns here
+func MoveCursor(row int) {
+	// 0H is the column part, all printing is done from left
+	fmt.Printf("\033[%d;0H", row)
+}
+
+// HideCursor hides the terminal cursor to avoid it from blinking
+func HideCursor() {
+	fmt.Print("\033[?25l")
+}
+
+// ShowCursor makes the cursor visible again
+func ShowCursor() {
+	fmt.Print("\033[?25h")
+}
+
+// ClearScreen clears the terminal screen.
+func ClearScreen() {
+	fmt.Print("\033[2J")
 }
