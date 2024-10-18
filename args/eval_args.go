@@ -21,6 +21,9 @@ import (
 // DownloadContext builds and returns the download context,
 // as defined by (parsing and evaluating) the commandline arguments.
 func DownloadContext(arguments []string) (Arguments ctx.Context) {
+
+	length := len(arguments)
+
 	for _, arg := range arguments {
 
 		switch {
@@ -29,17 +32,22 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 		case arg == "-B":
 			Arguments.BackgroundMode = true
+			if len(arguments) == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			logFile := downloader.CheckIfFileExists("wget-log")
 			fd, err := os.Create(logFile)
 			if err != nil {
-				xerr.WriteError(fmt.Errorf("failed to create %q: defaulting to normal", logFile), 2, false)
-				continue
+				xerr.WriteError(fmt.Errorf("failed to create %q defaulting to stdout", logFile), 2, false)
 			}
 			fmt.Printf("Output will be written to %s\n", logFile)
-			os.Stdout = fd // change the standard output to the log file
+			os.Stdout = fd // Instead of sending output to standard output (stdout) send to wget-log
 
 		case strings.HasPrefix(arg, "-P="):
 			isParsed, path := IsPathFlag(arg)
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			if isParsed {
 				Arguments.SavePath = path
 			}
@@ -68,34 +76,65 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			Arguments.ConvertLinks = true
 
 		case strings.HasPrefix(arg, "-O="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			if ok, file := IsOutputFlag(arg); ok && file != "" {
 				Arguments.OutputFile = file
 			}
 
 		case strings.HasPrefix(arg, "--rate-limit="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			Arguments.RateLimit = strings.TrimPrefix(arg, "--rate-limit=")
 			Arguments.RateLimitValue = ToBytes(Arguments.RateLimit)
 
 		case strings.HasPrefix(arg, "-R="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			rejects := strings.Split(strings.TrimPrefix(arg, "-R="), ",")
 			Arguments.Rejects = append(Arguments.Rejects, rejects...)
 
 		case strings.HasPrefix(arg, "--reject="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			rejects := strings.Split(strings.TrimPrefix(arg, "--reject="), ",")
 			Arguments.Rejects = append(Arguments.Rejects, rejects...)
 
 		case strings.HasPrefix(arg, "-X="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			excludes := strings.Split(strings.TrimPrefix(arg, "-X="), ",")
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		case strings.HasPrefix(arg, "--exclude="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			excludes := strings.Split(strings.TrimPrefix(arg, "--exclude="), ",")
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		default:
-			Arguments.Links = append(Arguments.Links, arg)
+			// if arg gets here and fails it wont be added to the urls flag
+			url, isValid, err := xurl.IsValidURL(arg)
+			if !isValid {
+				xerr.WriteError(err, 1, false)
+			}
+			if isValid {
+				Arguments.Links = append(Arguments.Links, url)
+			}
 		}
 	}
+
+	// if no links have been supplied through the command line then our program is useless - exit
+	if len(Arguments.Links) == 0 {
+		xerr.WriteError(help.UsageMessage, 1, true)
+	}
+
 	return
 }
 
