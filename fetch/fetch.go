@@ -86,11 +86,11 @@ type DownloadStatus struct {
 }
 
 var m sync.Mutex
+var Status = &DownloadStatus{} // am having problems accessing this struct concurrently
 
 // URL downloads the file from the given url, and saves it to the given file,
 // respecting the given speed limit; i.e., the download speed never exceeds `limit` bytes/second
 func URL(url string, config Config) (info FileInfo, err error) {
-	Status := &DownloadStatus{}
 
 	m.Lock()
 	Status.Start = syscheck.GetCurrentTime(true)
