@@ -6,6 +6,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -41,7 +43,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		case strings.HasPrefix(arg, "-P="):
 			isParsed, path := IsPathFlag(arg)
 			if isParsed {
-				Arguments.SavePath = path
+				Arguments.SavePath = CreateDirFromPath(path)
 			}
 
 		case strings.HasPrefix(arg, "-i="):
@@ -97,6 +99,30 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		}
 	}
 	return
+}
+
+// CreateDirFromPath creates a directory from given dirPath and returns a clean path
+// if dirPath does not exist it is created
+func CreateDirFromPath(dirPath string) string {
+
+	// check for tilde '~` symbol and replace with
+	if strings.HasPrefix(dirPath, "~") {
+		dirPath = strings.Replace(dirPath, "~", "/home", 1)
+	}
+	// clean the path by:
+	//removing more than one consecutive backslashes
+	//replacing '.' with nothing
+	//replacing '..' and replace all non-.. preceding it with nothing
+	dirPath = path.Clean(dirPath)
+
+	absolutePath, err := filepath.Abs(dirPath)
+
+	err = os.MkdirAll(absolutePath, 0777)
+	if err != nil {
+		return "./"
+	}
+
+	return absolutePath
 }
 
 // ToBytes converts a rateLimit in string format to bytes, if no suffix is supplied then the value is considered in bytes
