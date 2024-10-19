@@ -55,11 +55,13 @@ func (a *arg) Download() error {
 
 	successfulDownloads := make(chan string, len(a.Links))
 
+	syscheck.MoveCursor(1)
 	syscheck.ClearScreen()
 	syscheck.HideCursor()
 	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
 
 	for lineNumber, url := range a.Links {
+		//lineNumber++
 
 		wg.Add(1)
 		go func(url string, rowOffset int) {
@@ -104,17 +106,19 @@ func (a *arg) Download() error {
 
 			if err != nil {
 				mu.Lock()
-				PrintLines(rowOffset+7, []string{
+				PrintLines(rowOffset+8, []string{
 					fmt.Sprintf("Error: %s", err.Error()),
 				})
 				mu.Unlock()
 			} else {
-				successfulDownloads <- url
-				mu.Lock()
-				PrintLines(rowOffset+5, []string{
-					syscheck.GetCurrentTime(false),
-				})
-				mu.Unlock()
+				if lineNumber != len(a.Links) {
+					successfulDownloads <- url
+					mu.Lock()
+					PrintLines(rowOffset+5, []string{
+						syscheck.GetCurrentTime(false),
+					})
+					mu.Unlock()
+				}
 			}
 		}(url, lineNumber*7) // Reserve 7 lines per download
 	}
@@ -134,36 +138,43 @@ func (a *arg) Download() error {
 		printUrls(successList)
 	}
 
-	fmt.Print("\033[?25h")
+	fmt.Println(syscheck.GetCurrentTime(false))
+	//fmt.Print("\033[?25h")
 	return nil
 }
 
 // PrintLines prints multiple lines of text starting from a specific row.
 func PrintLines(baseRow int, lines []string) {
 	for i, line := range lines {
-		syscheck.MoveCursor(baseRow + i)
-		fmt.Print("\r", line)
+		i++
+		syscheck.MoveCursor(baseRow + i) // move to the correct line
+		fmt.Print("\033[K")              // clear the line
+		fmt.Print(line)
 	}
 }
 
 // CalculateETA estimates the time left for a download.
 func CalculateETA(downloaded, total int64, elapsed time.Duration) string {
-	if downloaded == 0 {
-		return "calculating..."
+
+	if downloaded == 0 { // to avoid division by zero
+		return "🕛"
 	}
+
 	rate := float64(downloaded) / elapsed.Seconds()
 	remaining := float64(total-downloaded) / rate
-	return formattedTime(int64(remaining)) // Just return the formatted time.
+
+	eta := time.Duration(remaining) * time.Second
+	return eta.String()
 }
 
 // Format time into a human-readable string.
 func formattedTime(seconds int64) string {
 	if seconds >= 3600 {
-		return fmt.Sprintf("%d h", seconds/3600)
+		return fmt.Sprintf("%dh", seconds/3600)
 	} else if seconds >= 60 {
-		return fmt.Sprintf("%d m", seconds/60)
+		return fmt.Sprintf("%dm", seconds/60)
 	} else {
-		return fmt.Sprintf("%d s", seconds)
+		return fmt.Sprintf("%ds", seconds)
 	}
 }
 
@@ -234,7 +245,7 @@ func printUrls(urls []string) {
 			res += url
 		}
 	}
-	fmt.Printf("\nDownloaded	[%s]\n", res)
+	fmt.Printf("\n\nDownloaded	[%s]\n", res)
 }
 
 // IsEmpty function checks whether an iterable is empty, an iterable is a string,array or slice.
