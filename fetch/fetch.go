@@ -87,10 +87,11 @@ type DownloadStatus struct {
 
 var m sync.Mutex
 
+var Status = &DownloadStatus{}
+
 // URL downloads the file from the given url, and saves it to the given file,
 // respecting the given speed limit; i.e., the download speed never exceeds `limit` bytes/second
 func URL(url string, config Config) (info FileInfo, err error) {
-	Status := &DownloadStatus{}
 
 	m.Lock()
 	Status.Start = syscheck.GetCurrentTime(true)
@@ -125,7 +126,7 @@ func URL(url string, config Config) (info FileInfo, err error) {
 
 	m.Lock()
 	// Send the request
-	Status.Status = "\rsending request, awaiting response..."
+	//Status.Status = "\r\nsending request, awaiting response..."
 	m.Unlock()
 
 	resp, err := client.Do(req)
@@ -137,7 +138,7 @@ func URL(url string, config Config) (info FileInfo, err error) {
 
 	m.Lock()
 	Status.StatusCode = resp.StatusCode
-	Status.Status = fmt.Sprintf("\rsending request, awaiting response... %d %s\n", Status.StatusCode, Status.Status)
+	Status.Status = fmt.Sprintf("\rsending request, awaiting response... %s\n", resp.Status)
 	m.Unlock()
 	if config.AllowedStatusCodes != nil && !slices.Contains(config.AllowedStatusCodes, resp.StatusCode) {
 		err = fmt.Errorf("wrong status code: %v", resp.StatusCode)
