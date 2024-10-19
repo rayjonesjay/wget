@@ -3,7 +3,6 @@ package downloader
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,7 +13,7 @@ import (
 	"wget/ctx"
 	"wget/fetch"
 	"wget/mirror"
-	"wget/xerr"
+	"wget/syscheck"
 )
 
 // arg represents the commandline arguments passed through the command line by the user
@@ -25,32 +24,6 @@ import (
 type arg struct {
 	*ctx.Context
 }
-
-const (
-	// KB Size of Data in KiloBytes
-	KB = 1000 * 1
-
-	// KiB Size of Data in KibiBytes, same as 2^10
-	KiB = 1 << (10 * 1)
-
-	// MB Size of Data in MegaBytes
-	MB = 1000 * KB
-
-	// MiB Size of Data in MebiBytes, same as 2^20
-	MiB = 1 << 20
-
-	// GB Size of Data in GigaBytes
-	GB = 1000 * MB
-
-	// GiB Size of Data in GibiBytes, same as 2^30
-	GiB = 1 << 30
-
-	// TB Size of Data in TeraBytes
-	TB = 1000 * GB
-
-	// TiB Size of Data in TebiBytes, same as 2^40
-	TiB = 1 << 40
-)
 
 var (
 	// DefaultDownloadDirectory is the default location where files retrieved will reside.
@@ -73,71 +46,146 @@ func Get(c ctx.Context) {
 	}
 }
 
-// Download handles normal downloads based on the provided URLs and other flags in the arg struct
-func (a *arg) Download() error {
+var width = syscheck.GetTerminalWidth()
+var mu sync.Mutex
 
+// Download handles each download and prints progress across 6 lines.
+func (a *arg) Download() error {
 	var wg sync.WaitGroup
-	for _, url := range a.Links {
+
+	successfulDownloads := make(chan string, len(a.Links))
+
+	syscheck.MoveCursor(1)
+	syscheck.ClearScreen()
+	syscheck.HideCursor()
+	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
+
+	for lineNumber, url := range a.Links {
+		//lineNumber++
+
 		wg.Add(1)
-		go func() {
+		go func(url string, rowOffset int) {
 			defer wg.Done()
-			//err := a.GetResource(url)
-			//if err != nil {
-			//	xerr.WriteError(err, 2, false)
-			//}
+
+			startTime := time.Now()
+
+			outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
 
 			GetFile := func(downloadUrl string, header http.Header) (*os.File, error) {
-				outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
-				// open the output file for writing, create if it does not exist, truncate if it does exist.
 				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 			}
 
-			info, err := fetch.URL(url, fetch.Config{
+			_, err := fetch.URL(url, fetch.Config{
 				GetFile: GetFile,
 				Limit:   0,
 				ProgressListener: func(downloaded, total int64) {
-					// the total number of equal signs is 112
-					var barLength float64 = 112
-
-					// filled tells us how many equal signs to print
 					progress := float64(downloaded) / float64(total)
-
-					filled := (progress * barLength)
-					// not filled will represent the empty part thats not filled with equal signs
+					barLength := width / 3
+					filled := int(progress * float64(barLength))
 					notFilled := barLength - filled
 
-					notFilledString := ""
-					if notFilled > 0 {
-						notFilledString = strings.Repeat(" ", int(notFilled))
-					}
+					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", filled), strings.Repeat(" ", notFilled))
+					percentage := (downloaded * 100) / total
+					eta := CalculateETA(downloaded, total, time.Since(startTime))
 
-					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", int(filled)), notFilledString)
-
-					// format and print the progress bar
-					a := fmt.Sprintf("\r%.2f / %.2f %s ", float64(downloaded), float64(total), bar)
-					fmt.Print(a)
+					mu.Lock() // Avoid race conditions on terminal output
+					PrintLines(rowOffset, []string{
+						fetch.Status.Start,
+						fetch.Status.Status + fmt.Sprintf("%d", fetch.Status.StatusCode),
+						fetch.Status.ContentLength,
+						fmt.Sprintf("saving file to: %s", outputFilePath),
+						fmt.Sprintf("%s / %s %s %d%% %s", formatSize(downloaded), formatSize(total), bar, percentage, eta),
+					})
+					mu.Unlock()
 				},
-				RateListener: func(rate int32) {
-				},
+				RateListener:       func(rate int32) {},
 				Body:               nil,
 				Method:             "GET",
 				AllowedStatusCodes: []int{http.StatusOK},
 			})
+
 			if err != nil {
-				fmt.Println(err)
+				mu.Lock()
+				PrintLines(rowOffset+8, []string{
+					fmt.Sprintf("Error: %s", err.Error()),
+				})
+				mu.Unlock()
 			} else {
-				fmt.Println(info)
+				if lineNumber != len(a.Links) {
+					successfulDownloads <- url
+					mu.Lock()
+					PrintLines(rowOffset+5, []string{
+						syscheck.GetCurrentTime(false),
+					})
+					mu.Unlock()
+				}
 			}
-		}()
+		}(url, lineNumber*7) // Reserve 7 lines per download
 	}
 
-	wg.Wait()
+	// wait for all go routines to finish in order to close the channel
+	go func() {
+		wg.Wait()
+		close(successfulDownloads)
+	}()
+	// Collect all successful downloads
+	var successList []string
+	for url := range successfulDownloads {
+		successList = append(successList, url)
+	}
+	if len(successList) != 0 {
+		// Print the successfully downloaded URLs
+		printUrls(successList)
+	}
+
+	fmt.Println(syscheck.GetCurrentTime(false))
+	//fmt.Print("\033[?25h")
 	return nil
 }
 
-// CheckIfFileExists will check if fname exists in the provided path if it exists it will add an extension and append a number starting from 1 to the original filename
+// PrintLines prints multiple lines of text starting from a specific row.
+func PrintLines(baseRow int, lines []string) {
+	for i, line := range lines {
+		i++
+		syscheck.MoveCursor(baseRow + i) // move to the correct line
+		fmt.Print("\033[K")              // clear the line
+		fmt.Print(line)
+	}
+}
+
+// CalculateETA estimates the time left for a download.
+func CalculateETA(downloaded, total int64, elapsed time.Duration) string {
+
+	if downloaded == 0 { // to avoid division by zero
+		return "🕛"
+	}
+
+	rate := float64(downloaded) / elapsed.Seconds()
+	remaining := float64(total-downloaded) / rate
+
+	eta := time.Duration(remaining) * time.Second
+	return eta.String()
+}
+
+// Format time into a human-readable string.
+func formattedTime(seconds int64) string {
+	if seconds >= 3600 {
+		return fmt.Sprintf("%dh", seconds/3600)
+	} else if seconds >= 60 {
+		return fmt.Sprintf("%dm", seconds/60)
+	} else {
+		return fmt.Sprintf("%ds", seconds)
+	}
+}
+
+// CheckIfFileExists will check if fname exists in the provided path if it exists it will add
+// a number starting from 1 between the filename and the beginning of extension
+// example: if file.txt exist CheckIfFileExist will generate a new name file1.txt. It does this iteratively.
 func CheckIfFileExists(fname string) string {
 
+	if strings.TrimSpace(fname) == "" {
+		return ""
+	}
 	// get the file extension
 	extension := filepath.Ext(fname)
 	base := fname
@@ -155,50 +203,6 @@ func CheckIfFileExists(fname string) string {
 		fname = fmt.Sprintf("%s%d%s", base, n, extension)
 		n++
 	}
-}
-
-// GetResource takes an url to a resource and attempts to fetch the specified resource, if an error occurs err is returned
-func (a *arg) GetResource(url string) (err error) {
-	outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
-	// open the output file for writing, create if it does not exist, truncate if it does exist.
-	outFile, err := os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE, 0644)
-
-	if err != nil {
-		return fmt.Errorf("failed to open file for writing %w: %s", err, url)
-	}
-	defer outFile.Close()
-
-	fmt.Println(GetCurrentTime(true))
-
-	client := &http.Client{
-		Timeout: time.Second * 10,
-	}
-
-	fmt.Print("\rsending request, awaiting response...")
-	resp, err := client.Get(url)
-	if err != nil {
-		xerr.WriteError(err, 2, false)
-	}
-
-	fmt.Printf("\rsending request, awaiting response... %d %s\n", resp.StatusCode, http.StatusText(resp.StatusCode))
-
-	if err != nil {
-		return fmt.Errorf("failed to download %s: %w", url, err)
-	}
-
-	defer resp.Body.Close()
-
-	n, err := io.Copy(outFile, resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to save URL %s to file %w", url, err)
-	}
-	r, _ := client.Head(url)
-	contentSizeMB := RoundOfSizeOfData(r.ContentLength)
-
-	fmt.Printf("\rcontent size: %d [~%s]\n", n, contentSizeMB)
-
-	fmt.Println(GetCurrentTime(false))
-	return nil
 }
 
 /*
@@ -241,7 +245,7 @@ func printUrls(urls []string) {
 			res += url
 		}
 	}
-	fmt.Printf("Downloaded	[%s]\n", res)
+	fmt.Printf("\n\nDownloaded	[%s]\n", res)
 }
 
 // IsEmpty function checks whether an iterable is empty, an iterable is a string,array or slice.
@@ -299,32 +303,6 @@ func (a *arg) MirrorWeb() error {
 	return nil
 }
 
-//func (a *arg) downloadAndParseHTML(link, saveDir) error {
-//	{
-//	}
-//}
-
-// rejectFileBasedOnExtension method checks if a file should be downloaded based on
-// its file extension
-func (a *arg) rejectFileBasedOnExtension(url string) bool {
-	for _, ext := range a.Rejects {
-		if strings.HasSuffix(url, ext) {
-			return true
-		}
-	}
-	return false
-}
-
-// shouldExcludeDir method checks if an url belongs to an excluded directory
-func (a *arg) shouldExcludeDir(url string) bool {
-	for _, directory := range a.Exclude {
-		if strings.Contains(url, directory) {
-			return true
-		}
-	}
-	return false
-}
-
 func (a *arg) Get() (err error) {
 	if a.Mirror {
 		// run in mirror mode
@@ -336,40 +314,22 @@ func (a *arg) Get() (err error) {
 	return
 }
 
-//func (a *arg) ConvertLinksForOfflineView(htmlContent, saveDir string) string {
-//	// replace href/src urls with local file paths
-//	// example: href="http://example.com/style.css" -> href="./style.css"
-//	return htmlCOncent
-//}
+// Helper function to format byte size
+func formatSize(size int64) string {
+	const (
+		KB = 1 << 10
+		MB = 1 << 20
+		GB = 1 << 30
+	)
 
-// GetCurrentTime prints a textual representation of the current time, it takes isStart
-// if isStart is true it indicates the download process has started, if false means end of the current download
-func GetCurrentTime(isStart bool) string {
-	// Get the current time
-	currentTime := time.Now()
-
-	// Format time to print up to seconds
-	formattedTime := currentTime.Format("2006-01-02 15:04:05")
-
-	if isStart {
-		return fmt.Sprintf("start at %s", formattedTime)
+	switch {
+	case size >= GB:
+		return fmt.Sprintf("%.2f GiB", float64(size)/GB)
+	case size >= MB:
+		return fmt.Sprintf("%.2f MiB", float64(size)/MB)
+	case size >= KB:
+		return fmt.Sprintf("%.2f KiB", float64(size)/KB)
+	default:
+		return fmt.Sprintf("%d B", size)
 	}
-	return fmt.Sprintf("finished at %s", formattedTime)
-}
-
-// RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
-func RoundOfSizeOfData(dataInBytes int64) string {
-	var size float64
-	var unit string
-	if dataInBytes >= GB {
-		size = float64(dataInBytes) / GB
-		unit = "GB"
-	} else if dataInBytes >= KB {
-		size = float64(dataInBytes) / MB
-		unit = "MB"
-	} else {
-		size = float64(dataInBytes)
-		unit = "KB"
-	}
-	return fmt.Sprintf("%.2f%s", size, unit)
 }
