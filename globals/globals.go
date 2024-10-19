@@ -10,11 +10,9 @@ import (
 
 var (
 	// SrcElements defines html elements that typically define their linked resource in the "src" attribute
-	SrcElements = map[string]bool{
-		"video": true, "audio": true, "img": true, "script": true, "iframe": true,
-	}
+	SrcElements = map[string]bool{"img": true}
 	// DataElements defines html elements that typically define their linked resource in the "data" attribute
-	DataElements = map[string]bool{"object": true}
+	DataElements = map[string]bool{}
 	// HrefElements defines html elements that typically define their linked resource in the "href" attribute
 	HrefElements = map[string]bool{"a": true, "link": true}
 	// SrcDataElements defines html elements that typically define their linked resource in either the "src" or "data"

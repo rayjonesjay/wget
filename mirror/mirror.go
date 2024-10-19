@@ -219,15 +219,6 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		return
 	}
 
-	// Add a link to the site icon, /favicon.ico (most clients love it),
-	//and to the /robots.txt file (wget downloads this file in mirror mode)
-	for _, relUrl := range []string{"/robots.txt", "/favicon.ico"} {
-		absoluteUrl, err := xurl.AbsoluteUrl(mirrorUrl, relUrl)
-		if err == nil {
-			_, _ = a.Site(absoluteUrl)
-		}
-	}
-
 	convertUrls := make(map[string]string)
 	// Download each link, synchronously, continuing to the next regardless of errors
 	for _, link := range linkedUrls {
