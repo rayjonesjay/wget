@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"slices"
-	"time"
 	"wget/fileio"
 	"wget/httpx"
 	"wget/limitedio"
@@ -17,10 +16,7 @@ import (
 
 const KiB = 1024
 
-var client = &http.Client{
-	// show some mercy on slow internet connections
-	Timeout: 30 * time.Second,
-}
+var client = &http.Client{}
 
 // headers our http client will send by default. Adapted from Chrome,
 // as some web servers will deny requests without a valid user agent
