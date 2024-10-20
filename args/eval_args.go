@@ -98,6 +98,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			Arguments.Links = append(Arguments.Links, arg)
 		}
 	}
+	fmt.Printf("%#v\n", Arguments)
 	return
 }
 
@@ -117,7 +118,7 @@ func CreateDirFromPath(dirPath string) string {
 
 	absolutePath, err := filepath.Abs(dirPath)
 
-	err = os.MkdirAll(absolutePath, 0777)
+	err = os.MkdirAll(absolutePath, 0755)
 	if err != nil {
 		return "./"
 	}
