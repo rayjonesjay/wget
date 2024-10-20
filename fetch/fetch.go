@@ -86,8 +86,6 @@ type DownloadStatus struct {
 }
 
 var m sync.Mutex
-var Status = &DownloadStatus{} // am having problems accessing this struct concurrently
-
 var Status = &DownloadStatus{}
 
 // URL downloads the file from the given url, and saves it to the given file,
@@ -124,11 +122,6 @@ func URL(url string, config Config) (info FileInfo, err error) {
 
 	// Set the default client headers, including user agent
 	setClientHeaders(&req.Header)
-
-	m.Lock()
-	// Send the request
-	//Status.Status = "\r\nsending request, awaiting response..."
-	m.Unlock()
 
 	resp, err := client.Do(req)
 	if err != nil {
