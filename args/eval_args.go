@@ -155,9 +155,9 @@ func CreateDirFromPath(dirPath string) string {
 	//replacing '..' and replace all non-.. preceding it with nothing
 	dirPath = path.Clean(dirPath)
 
-	absolutePath, err := filepath.Abs(dirPath)
+	absolutePath, _ := filepath.Abs(dirPath)
 
-	err = os.MkdirAll(absolutePath, 0755)
+	err := os.MkdirAll(absolutePath, 0755)
 	if err != nil {
 		return "./"
 	}
