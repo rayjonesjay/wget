@@ -4,8 +4,10 @@ package globals
 
 import (
 	"bytes"
+	"fmt"
 	"golang.org/x/net/html"
 	"io"
+	"wget/syscheck"
 )
 
 var (
@@ -54,4 +56,37 @@ func RenderToString(node *html.Node) string {
 	_ = html.Render(writer, node)
 
 	return buffer.String()
+}
+
+// FormatSize helper function to format byte size
+func FormatSize(size int64) string {
+	const (
+		KB = 1 << 10
+		MB = 1 << 20
+		GB = 1 << 30
+	)
+
+	switch {
+	case size >= GB:
+		return fmt.Sprintf("%.2f GiB", float64(size)/GB)
+	case size >= MB:
+		return fmt.Sprintf("%.2f MiB", float64(size)/MB)
+	case size >= KB:
+		return fmt.Sprintf("%.2f KiB", float64(size)/KB)
+	default:
+		if size < 0 {
+			return "--.- B"
+		}
+		return fmt.Sprintf("%d B", size)
+	}
+}
+
+// PrintLines prints multiple lines of text starting from a specific row.
+func PrintLines(baseRow int, lines []string) {
+	for i, line := range lines {
+		i++
+		syscheck.MoveCursor(baseRow + i) // move to the correct line
+		fmt.Print("\033[K")              // clear the line
+		fmt.Print(line)
+	}
 }

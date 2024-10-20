@@ -12,10 +12,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
+	"time"
 	"wget/convertlinks"
 	"wget/ctx"
 	"wget/fetch"
 	"wget/fileio"
+	"wget/globals"
 	"wget/httpx"
 	"wget/mirror/links"
 	"wget/mirror/xurl"
@@ -61,6 +63,7 @@ type arg struct {
 	rejectPatterns []*regexp.Regexp
 	// excludePatterns keeps a list of regex patterns to match directories to be rejected for download
 	excludePatterns []*regexp.Regexp
+	d               int
 }
 
 // UrlDownloadInfo keeps the results of downloading a given URL,
@@ -160,23 +163,46 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		return
 	}
 
+	status := fetch.DownloadStatus{}
+	status.OnUpdate = func(status *fetch.DownloadStatus) {
+		globals.PrintLines(
+			(a.d-1)*8, []string{
+				status.Start,
+				status.Status,
+				status.ContentLength,
+				status.SavePath,
+				status.Progress,
+				status.Finished,
+			},
+		)
+	}
+
+	l := status.ProgressListener()
+	tmp := l.OnStart
+	l.OnStart = func(time time.Time) {
+		tmp(time)
+		a.d++
+	}
+
 	// TODO add progress and rate listeners
 	info, err = fetch.URL(
 		mirrorUrl,
 		fetch.Config{
-			GetFile:            a.GetFile,
-			ShouldDownload:     a.ShouldDownload,
-			Limit:              int32(a.RateLimitValue),
-			ProgressListener:   nil,
-			RateListener:       nil,
-			Body:               nil,
-			Method:             "GET",
-			AllowedStatusCodes: []int{http.StatusOK},
+			GetFile:                  a.GetFile,
+			ShouldDownload:           a.ShouldDownload,
+			Limit:                    int32(a.RateLimitValue),
+			ProgressListener:         nil,
+			RateListener:             nil,
+			Body:                     nil,
+			Method:                   "GET",
+			AllowedStatusCodes:       []int{http.StatusOK},
+			AdvancedProgressListener: l,
 		},
 	)
 	if err != nil {
 		return
 	}
+	//fmt.Printf("\n\033[0;32m%s\033[0m", syscheck.GetCurrentTime(false))
 
 	// Save the results of the downloaded resource
 	a.urlDownloadInfo[mirrorUrl] = UrlDownloadInfo{
