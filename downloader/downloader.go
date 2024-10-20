@@ -74,48 +74,62 @@ func (a *arg) Download() error {
 				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 			}
 
-			_, err := fetch.URL(url, fetch.Config{
-				GetFile: GetFile,
-				Limit:   0,
-				ProgressListener: func(downloaded, total int64) {
-					progress := float64(downloaded) / float64(total)
-					barLength := width / 3
-					filled := int(progress * float64(barLength))
-					notFilled := barLength - filled
+			_, err := fetch.URL(
+				url, fetch.Config{
+					GetFile: GetFile,
+					Limit:   0,
+					ProgressListener: func(downloaded, total int64) {
+						progress := float64(downloaded) / float64(total)
+						barLength := width / 3
+						filled := int(progress * float64(barLength))
+						notFilled := barLength - filled
 
-					bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", filled), strings.Repeat(" ", notFilled))
-					percentage := (downloaded * 100) / total
-					eta := CalculateETA(downloaded, total, time.Since(startTime))
+						bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", filled), strings.Repeat(" ", notFilled))
+						percentage := (downloaded * 100) / total
+						eta := CalculateETA(downloaded, total, time.Since(startTime))
 
-					mu.Lock() // Avoid race conditions on terminal output
-					PrintLines(rowOffset, []string{
-						fetch.Status.Start,
-						fetch.Status.Status + fmt.Sprintf("%d", fetch.Status.StatusCode),
-						fetch.Status.ContentLength,
-						fmt.Sprintf("saving file to: %s", outputFilePath),
-						fmt.Sprintf("%s / %s %s %d%% %s", formatSize(downloaded), formatSize(total), bar, percentage, eta),
-					})
-					mu.Unlock()
+						mu.Lock() // Avoid race conditions on terminal output
+						PrintLines(
+							rowOffset, []string{
+								"@@", "@@@", "@@@@",
+								//fetch.Status.Start,
+								//fetch.Status.Status + fmt.Sprintf("%d", fetch.Status.StatusCode),
+								//fetch.Status.ContentLength,
+								fmt.Sprintf("saving file to: %s", outputFilePath),
+								fmt.Sprintf(
+									"%s / %s %s %d%% %s", formatSize(downloaded), formatSize(total), bar, percentage,
+									eta,
+								),
+							},
+						)
+						mu.Unlock()
+					},
+					RateListener:       func(rate int32) {},
+					Body:               nil,
+					Method:             "GET",
+					AllowedStatusCodes: []int{http.StatusOK},
 				},
-				RateListener:       func(rate int32) {},
-				Body:               nil,
-				Method:             "GET",
-				AllowedStatusCodes: []int{http.StatusOK},
-			})
+			)
 
 			if err != nil {
 				mu.Lock()
-				PrintLines(rowOffset+8, []string{
-					fmt.Sprintf("Error: %s", err.Error()),
-				})
+				PrintLines(
+					rowOffset+8, []string{
+						fmt.Sprintf("Error: %s", err.Error()),
+					},
+				)
 				mu.Unlock()
 			} else {
-				successfulDownloads <- url
-				mu.Lock()
-				PrintLines(rowOffset+5, []string{
-					syscheck.GetCurrentTime(false),
-				})
-				mu.Unlock()
+				if lineNumber != len(a.Links) {
+					successfulDownloads <- url
+					mu.Lock()
+					PrintLines(
+						rowOffset+5, []string{
+							syscheck.GetCurrentTime(false),
+						},
+					)
+					mu.Unlock()
+				}
 			}
 		}(url, lineNumber*7) // Reserve 7 lines per download
 	}

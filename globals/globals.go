@@ -4,17 +4,17 @@ package globals
 
 import (
 	"bytes"
+	"fmt"
 	"golang.org/x/net/html"
 	"io"
+	"wget/syscheck"
 )
 
 var (
 	// SrcElements defines html elements that typically define their linked resource in the "src" attribute
-	SrcElements = map[string]bool{
-		"video": true, "audio": true, "img": true, "script": true, "iframe": true,
-	}
+	SrcElements = map[string]bool{"img": true}
 	// DataElements defines html elements that typically define their linked resource in the "data" attribute
-	DataElements = map[string]bool{"object": true}
+	DataElements = map[string]bool{}
 	// HrefElements defines html elements that typically define their linked resource in the "href" attribute
 	HrefElements = map[string]bool{"a": true, "link": true}
 	// SrcDataElements defines html elements that typically define their linked resource in either the "src" or "data"
@@ -56,4 +56,37 @@ func RenderToString(node *html.Node) string {
 	_ = html.Render(writer, node)
 
 	return buffer.String()
+}
+
+// FormatSize helper function to format byte size
+func FormatSize(size int64) string {
+	const (
+		KB = 1 << 10
+		MB = 1 << 20
+		GB = 1 << 30
+	)
+
+	switch {
+	case size >= GB:
+		return fmt.Sprintf("%.2f GiB", float64(size)/GB)
+	case size >= MB:
+		return fmt.Sprintf("%.2f MiB", float64(size)/MB)
+	case size >= KB:
+		return fmt.Sprintf("%.2f KiB", float64(size)/KB)
+	default:
+		if size < 0 {
+			return "--.- B"
+		}
+		return fmt.Sprintf("%d B", size)
+	}
+}
+
+// PrintLines prints multiple lines of text starting from a specific row.
+func PrintLines(baseRow int, lines []string) {
+	for i, line := range lines {
+		i++
+		syscheck.MoveCursor(baseRow + i) // move to the correct line
+		fmt.Print("\033[K")              // clear the line
+		fmt.Print(line)
+	}
 }

@@ -10,11 +10,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
+	"time"
 	"wget/convertlinks"
 	"wget/ctx"
 	"wget/fetch"
 	"wget/fileio"
+	"wget/globals"
 	"wget/httpx"
 	"wget/mirror/links"
 	"wget/mirror/xurl"
@@ -56,6 +59,11 @@ type arg struct {
 	//such as the filename the contents of the URL was written to,
 	//and whether there was any error when downloading the file
 	urlDownloadInfo map[string]UrlDownloadInfo
+	// rejectPatterns keeps a list of regex patterns to match files to be rejected for download
+	rejectPatterns []*regexp.Regexp
+	// excludePatterns keeps a list of regex patterns to match directories to be rejected for download
+	excludePatterns []*regexp.Regexp
+	d               int
 }
 
 // UrlDownloadInfo keeps the results of downloading a given URL,
@@ -89,8 +97,15 @@ func Site(cxt ctx.Context, mirrorUrl string) error {
 		parse.Scheme = "http"
 	}
 
+	m.init()
 	_, err = m.Site(parse.String())
 	return err
+}
+
+// init is called once, when the struct instance is created, to initialize various fields to their usable values
+func (a *arg) init() {
+	a.initReject()
+	a.initExclude()
 }
 
 // GetFile returns a writable file, where the downloaded file will be written into,
@@ -103,6 +118,27 @@ func (a *arg) GetFile(downloadUrl string, header http.Header) (*os.File, error) 
 		return nil, err
 	}
 	return os.OpenFile(downloadPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+}
+
+// ShouldDownload will be called to validate whether the file from the given url
+// should be downloaded, based on the given headers as retrieved from the server.
+// This will always download HTML files, so that we can extract linked URLs from
+// them, and later delete them if the directory-based-limits infer
+func (a *arg) ShouldDownload(mirrorUrl string, header http.Header) bool {
+	if httpx.ExtractMimeType(header) == "text/html" {
+		return true
+	}
+
+	parse, err := url.Parse(mirrorUrl)
+	if err != nil {
+		return false
+	}
+
+	if a.ShouldReject(parse.Path) || a.ShouldExclude(parse.Path) {
+		return false
+	}
+
+	return true
 }
 
 // Site downloads the entire website being possible to use "part" of the website offline,
@@ -127,28 +163,58 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		return
 	}
 
+	status := fetch.DownloadStatus{}
+	status.OnUpdate = func(status *fetch.DownloadStatus) {
+		globals.PrintLines(
+			(a.d-1)*8, []string{
+				status.Start,
+				status.Status,
+				status.ContentLength,
+				status.SavePath,
+				status.Progress,
+				status.Finished,
+			},
+		)
+	}
+
+	l := status.ProgressListener()
+	tmp := l.OnStart
+	l.OnStart = func(time time.Time) {
+		tmp(time)
+		a.d++
+	}
+
 	// TODO add progress and rate listeners
 	info, err = fetch.URL(
 		mirrorUrl,
 		fetch.Config{
-			GetFile:            a.GetFile,
-			Limit:              int32(a.RateLimitValue),
-			ProgressListener:   nil,
-			RateListener:       nil,
-			Body:               nil,
-			Method:             "GET",
-			AllowedStatusCodes: []int{http.StatusOK},
+			GetFile:                  a.GetFile,
+			ShouldDownload:           a.ShouldDownload,
+			Limit:                    int32(a.RateLimitValue),
+			ProgressListener:         nil,
+			RateListener:             nil,
+			Body:                     nil,
+			Method:                   "GET",
+			AllowedStatusCodes:       []int{http.StatusOK},
+			AdvancedProgressListener: l,
 		},
 	)
 	if err != nil {
 		return
 	}
+	//fmt.Printf("\n\033[0;32m%s\033[0m", syscheck.GetCurrentTime(false))
 
 	// Save the results of the downloaded resource
 	a.urlDownloadInfo[mirrorUrl] = UrlDownloadInfo{
 		url:      mirrorUrl,
 		FileInfo: info,
 		error:    err,
+	}
+
+	if !a.ShouldDownload(mirrorUrl, http.Header{}) {
+		defer func(name string) {
+			_ = os.Remove(name)
+		}(info.Name)
 	}
 
 	contentType := httpx.ExtractMimeType(info.Headers)
@@ -177,15 +243,6 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	if len(linkedUrls) == 0 {
 		// No more links to download
 		return
-	}
-
-	// Add a link to the site icon, /favicon.ico (most clients love it),
-	//and to the /robots.txt file (wget downloads this file in mirror mode)
-	for _, relUrl := range []string{"/robots.txt", "/favicon.ico"} {
-		absoluteUrl, err := xurl.AbsoluteUrl(mirrorUrl, relUrl)
-		if err == nil {
-			_, _ = a.Site(absoluteUrl)
-		}
 	}
 
 	convertUrls := make(map[string]string)
@@ -256,8 +313,11 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	return
 }
 
+// FetchCss assumes the file of the given filename, is a CSS file and thus,
+// extracts all linked URLs, downloads the linked resources, then optionally
+// converting the links defined in the CSS file to local filesystem based paths
 func (a *arg) FetchCss(mirrorUrl, fileName string) {
-	// the downloaded file is CSS; attempt to extract linked xurl resources
+	// the downloaded file is CSS; attempt to extract linked url resources
 	cssFile, err := os.Open(fileName)
 	if err != nil {
 		return
@@ -268,7 +328,7 @@ func (a *arg) FetchCss(mirrorUrl, fileName string) {
 	// get all urls that are linked in the given CSS file
 	var linkedUrls = links.FromCssUrl(string(cssStr))
 
-	// download each linked xurl synchronously, continuing to the next regardless of errors
+	// download each linked url synchronously, continuing to the next regardless of errors
 	convertUrls := make(map[string]string)
 	for _, link := range linkedUrls {
 		linkedUrl, err := xurl.AbsoluteUrl(mirrorUrl, link)
