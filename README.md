@@ -8,42 +8,73 @@ WGET is a utility that is used for non-interactive downloads over the net.
 ├── args
 │   ├── eval_args.go
 │   └── eval_args_test.go
+├── convertlinks
+│   ├── convertlinks.go
+│   └── convertlinks_test.go
+├── css
+│   ├── css.go
+│   └── css_test.go
 ├── ctx
 │   ├── ctx.go
 │   └── ctx_test.go
 ├── downloader
-│   └── downloader.go
+│   ├── downloader.go
+│   └── downloader_test.go
 ├── fetch
 │   ├── fetch.go
 │   └── fetch_test.go
 ├── fileio
 │   ├── fileio.go
 │   └── fileio_test.go
+├── globals
+│   ├── globals.go
+│   └── globals_test.go
 ├── go.mod
+├── go.sum
 ├── help
 │   └── help.go
 ├── httpx
 │   ├── extras.go
 │   └── extras_test.go
+├── info
+│   ├── info.go
+│   └── info_test.go
 ├── LICENSE
 ├── limitedio
 │   ├── limitedio.go
 │   └── limitedio_test.go
 ├── main.go
 ├── mirror
-│   └── mirror.go
+│   ├── dirlimits.go
+│   ├── links
+│   │   ├── css.go
+│   │   ├── css_test.go
+│   │   ├── html.go
+│   │   └── html_test.go
+│   ├── mirror.go
+│   ├── path.go
+│   ├── path_test.go
+│   ├── README.md
+│   └── xurl
+│       ├── url.go
+│       └── url_test.go
 ├── README.md
+├── RUNTESTS.md
 ├── syscheck
 │   ├── system.go
 │   └── system_test.go
+├── temp
+│   ├── temp.go
+│   └── temp_test.go
 ├── TESTS.md
 ├── xerr
-│   └── xerr.go
+│   ├── xerr.go
+│   └── xerr_test.go
 └── xurl
     ├── xurl.go
     └── xurl_test.go
 
-13 directories, 25 files
+20 directories, 49 files
 ```
 
 ## Functionalities
@@ -96,7 +127,8 @@ For example:
 ```
 $ go run . --mirror URL
 ```
-
+### Codebase
+The codebase has over `6000` lines of Go code.
 
 ### Authors
 * [**ramuiruri**](https://learn.zone01kisumu.ke/git/ramuiruri)
