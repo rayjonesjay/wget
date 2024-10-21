@@ -2,6 +2,7 @@ package temp
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -167,17 +168,27 @@ func TestReturnsExistingTempDir(t *testing.T) {
 
 func TestHandlesMkdirAllError(t *testing.T) {
 	originalTempDir := os.TempDir()
-	defer os.Setenv("TMPDIR", originalTempDir)
-
-	os.Setenv("TMPDIR", "/invalid/path")
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("Expected panic due to MkdirAll failure, but did not panic")
+	defer func(key, value string) {
+		err := os.Setenv(key, value)
+		if err != nil {
+			log.Fatalf("failed to set environment variable: %v\n", err)
 		}
-	}()
+	}("TMPDIR", originalTempDir)
 
-	Dir()
+	// get the tmp dir before changing the TMPDIR environment variable
+	dir := Dir()
+
+	err := os.Setenv("TMPDIR", "/invalid/path")
+	if err != nil {
+		log.Fatalf("failed to set environment variable: %v\n", err)
+	}
+
+	// When the TMPDIR environment variable is changed, but the Dir() function was
+	// already called, then, Dir will stick to the first TMPDIR it succeeded in
+	// creating
+	if Dir() != dir {
+		t.Errorf("expected %s, but got %s", originalTempDir, Dir())
+	}
 }
 
 func TestFileSuccess(t *testing.T) {
@@ -200,30 +211,12 @@ func TestFileSuccess(t *testing.T) {
 		t.Fatal("expected a file, got nil")
 	}
 
-	file.Close()
+	err = file.Close()
+	if err != nil {
+		log.Fatalf("failed to close temp file [%q]: %v\n", file.Name(), err)
+	}
 
 	if _, err := os.Stat(file.Name()); os.IsNotExist(err) {
 		t.Fatalf("expected file %s to exist, but it does not", file.Name())
 	}
 }
-
-func TestFileError(t *testing.T) {
-	// Mocked Dir function for testing
-	Dir := func() string {
-		return os.TempDir() // Default to system temp dir
-	}
-
-	originalDir := Dir
-	Dir = func() string { return "/non/existent/directory" }
-	defer func() { Dir = originalDir }()
-
-	file, err := File()
-
-	if err == nil {
-		t.Fatal("expected an error, got none")
-	}
-	if file != nil {
-		t.Fatal("expected file to be nil, got a file")
-	}
-}
-
