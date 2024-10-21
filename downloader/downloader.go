@@ -179,17 +179,6 @@ func CalculateETA(downloaded, total int64, elapsed time.Duration) string {
 	return eta.String()
 }
 
-// Format time into a human-readable string.
-func formattedTime(seconds int64) string {
-	if seconds >= 3600 {
-		return fmt.Sprintf("%dh", seconds/3600)
-	} else if seconds >= 60 {
-		return fmt.Sprintf("%dm", seconds/60)
-	} else {
-		return fmt.Sprintf("%ds", seconds)
-	}
-}
-
 // CheckIfFileExists will check if fname exists in the provided path if it exists it will add
 // a number starting from 1 between the filename and the beginning of extension
 // example: if file.txt exist CheckIfFileExist will generate a new name file1.txt. It does this iteratively.
