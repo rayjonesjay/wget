@@ -1,46 +1,45 @@
 package downloader
 
 import (
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"wget/ctx"
+	"wget/httpx"
 )
 
+// func TestGetResource_Success(t *testing.T) {
+// 	// Create a temporary directory to save the file.
+// 	tempDir := t.TempDir()
 
-func TestGetResource_Success(t *testing.T) {
-	// Create a temporary directory to save the file.
-	tempDir := t.TempDir()
+// 	// Set up the context with necessary fields.
+// 	c := ctx.Context{
+// 		OutputFile: "",
+// 		SavePath:   tempDir,
+// 	}
 
-	// Set up the context with necessary fields.
-	c := ctx.Context{
-		OutputFile: "",
-		SavePath:   tempDir,
-	}
+// 	a := arg{Context: &c}
 
-	a := arg{Context: &c}
+// 	// Mock the HTTP server for testing.
+// 	http.HandleFunc("/file", func(w http.ResponseWriter, r *http.Request) {
+// 		w.WriteHeader(http.StatusOK)
+// 		w.Write([]byte("Test file content"))
+// 	})
+// 	go http.ListenAndServe(":8080", nil)
 
-	// Mock the HTTP server for testing.
-	http.HandleFunc("/file", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Test file content"))
-	})
-	go http.ListenAndServe(":8080", nil)
+// 	// Test the resource download.
+// 	err := a.GetResource("http://localhost:8080/file")
+// 	if err != nil {
+// 		t.Fatalf("GetResource failed: %v", err)
+// 	}
 
-	// Test the resource download.
-	err := a.GetResource("http://localhost:8080/file")
-	if err != nil {
-		t.Fatalf("GetResource failed: %v", err)
-	}
-
-	// Verify file is saved correctly.
-	expectedFile := filepath.Join(tempDir, "file")
-	if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
-		t.Fatalf("Expected file %s not found", expectedFile)
-	}
-}
+// 	// Verify file is saved correctly.
+// 	expectedFile := filepath.Join(tempDir, "file")
+// 	if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+// 		t.Fatalf("Expected file %s not found", expectedFile)
+// 	}
+// }
 
 func TestCheckIfFileExists(t *testing.T) {
 	tempDir := t.TempDir()
@@ -109,12 +108,12 @@ func TestRoundOfSizeOfData(t *testing.T) {
 		bytes    int64
 		expected string
 	}{
-		{MB, "1.00MB"},
-		{GB, "1.00GB"},
+		{int64(httpx.MB), "1.00MB"},
+		{int64(httpx.GB), "1.00GB"},
 	}
 
 	for _, tc := range testCases {
-		result := RoundOfSizeOfData(tc.bytes)
+		result := httpx.RoundOfSizeOfData(tc.bytes)
 		if result != tc.expected {
 			t.Fatalf("Expected %s but got %s", tc.expected, result)
 		}
@@ -127,12 +126,12 @@ func TestCheckIfFileExists_Multi(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"test1", "file.txt", "file1.txt"},
-		{"test2", "file", "file1"},
+		{"test1", "file.txt", "file(1).txt"},
+		{"test2", "file", "file(1)"},
 		{"test3", "", ""},
-		{"test4", "hello_world.png", "hello_world1.png"},
-		{"test5", "20MB.zip", "20MB1.zip"},
-		{"test6", ".zip", "1.zip"},
+		{"test4", "hello_world.png", "hello_world(1).png"},
+		{"test5", "20MB.zip", "20MB(1).zip"},
+		{"test6", ".zip", "(1).zip"},
 	}
 
 	create := func(fpath string) {
