@@ -16,6 +16,7 @@ import (
 	"wget/downloader"
 	"wget/fileio"
 	"wget/help"
+	"wget/info"
 	"wget/xerr"
 	"wget/xurl"
 )
@@ -29,10 +30,10 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 	for _, arg := range arguments {
 
 		switch {
-		case arg == "--help":
-			xerr.WriteError(help.Manual, 0, true)
+		case arg == "--help" || arg == "-h":
+			xerr.WriteError(help.PrintManPage(), 0, true)
 
-		case arg == "-B":
+		case arg == "-B" || arg == "--background":
 			Arguments.BackgroundMode = true
 			if len(arguments) == 1 {
 				xerr.WriteError(help.UsageMessage, 1, true)
@@ -119,6 +120,9 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			}
 			excludes := strings.Split(strings.TrimPrefix(arg, "--exclude="), ",")
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
+
+		case arg == "--version" || arg == "-v":
+			xerr.WriteError(info.VersionText(), 0, true)
 
 		default:
 			// if arg gets here and fails it wont be added to the urls flag
