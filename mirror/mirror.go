@@ -63,7 +63,10 @@ type arg struct {
 	rejectPatterns []*regexp.Regexp
 	// excludePatterns keeps a list of regex patterns to match directories to be rejected for download
 	excludePatterns []*regexp.Regexp
-	d               int
+	// d keeps the download id of the current mirror URL. Since, we are downloading
+	// recursively, this integer keeps the number of mirrored URLS, thus, can be used
+	// to assign unique integer IDs to each downloads
+	d int
 }
 
 // UrlDownloadInfo keeps the results of downloading a given URL,
@@ -163,8 +166,11 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		return
 	}
 
+	// define a download status listener for the current mirror URL
 	status := fetch.DownloadStatus{}
 	status.OnUpdate = func(status *fetch.DownloadStatus) {
+		// whenever the status of this download has changed, we print the progress to its
+		// respective position in the terminal
 		globals.PrintLines(
 			(a.d-1)*8, []string{
 				status.Start,
@@ -177,14 +183,17 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 		)
 	}
 
-	l := status.ProgressListener()
-	tmp := l.OnStart
-	l.OnStart = func(time time.Time) {
-		tmp(time)
-		a.d++
+	// configure an Advanced Progress Listener for the GET request
+	advancedProgressListener := status.ProgressListener()
+	{
+		// need to increment the ID when the download actually starts, inject an onstart listener
+		originalOnStart := advancedProgressListener.OnStart
+		advancedProgressListener.OnStart = func(time time.Time) {
+			originalOnStart(time)
+			a.d++
+		}
 	}
 
-	// TODO add progress and rate listeners
 	info, err = fetch.URL(
 		mirrorUrl,
 		fetch.Config{
@@ -196,13 +205,12 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 			Body:                     nil,
 			Method:                   "GET",
 			AllowedStatusCodes:       []int{http.StatusOK},
-			AdvancedProgressListener: l,
+			AdvancedProgressListener: advancedProgressListener,
 		},
 	)
 	if err != nil {
 		return
 	}
-	//fmt.Printf("\n\033[0;32m%s\033[0m", syscheck.GetCurrentTime(false))
 
 	// Save the results of the downloaded resource
 	a.urlDownloadInfo[mirrorUrl] = UrlDownloadInfo{
