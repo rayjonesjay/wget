@@ -1,2 +1,0 @@
-add resume functionlity
-add internet check functionlity
