@@ -224,6 +224,7 @@ func URL(url string, config Config) (info FileInfo, err error) {
 	return info, nil
 }
 
+// DownloadStatus holds printable download status of a Get request at any one instance during the download
 type DownloadStatus struct {
 	StatusCode    int
 	Status        string
@@ -236,11 +237,23 @@ type DownloadStatus struct {
 
 	Downloaded, Total int64
 	Rate              int32
-	OnUpdate          func(status *DownloadStatus)
+	// OnUpdate will be called whenever the download status (of this struct) changes.
+	// A reference to this struct is provided for convenience
+	OnUpdate func(status *DownloadStatus)
+	// m mutex locker. Some status update operations, such as Progress, may be
+	// changed by different threads; this locker will manage race conditions that may
+	// arise
+	m *sync.Mutex
 }
 
+// ProgressListener builds a compliant advanced download progress listener, that
+// reports its download status to the receiver DownloadStatus
 func (s *DownloadStatus) ProgressListener() (l AdvancedProgressListener) {
-	m := &sync.Mutex{}
+	if s.m == nil {
+		s.m = new(sync.Mutex)
+	}
+
+	m := s.m
 	l.OnStart = func(t time.Time) {
 		s.Start = fmt.Sprintf("start at %s", format(t))
 	}
