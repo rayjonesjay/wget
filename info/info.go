@@ -28,6 +28,12 @@ License MIT: The MIT License
 https://opensource.org/license/mit.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
+
+authors:
+https://github.com/rayjonesjay
+https://github.com/Wambita
+https://github.com/WycliffeAlphus
+https://github.com/nanyona
 `
 	v = strings.TrimLeft(v, "\n")
 	return fmt.Sprintf(v, Name, Version, runtime.GOOS, runtime.GOARCH, Go)
