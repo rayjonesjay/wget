@@ -42,11 +42,11 @@ func GetTerminalWidth() int {
 	ws := &terminal{}
 	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
 	if err != 0 {
-		xerr.WriteError("cannot get terminal size, make sure you are using darwin or linux os", 1, true)
+		xerr.WriteError("cannot get terminal size, make sure you are using darwin or linux os", 1, false)
 	}
 	width := int(ws.Col)
 	if width < 65 {
-		xerr.WriteError("terminal size to small adjust width to at least 65", 1, true)
+		xerr.WriteError("terminal size to small adjust width to at least 65", 1, false)
 	}
 	return int(width)
 }
