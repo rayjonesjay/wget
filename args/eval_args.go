@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode"
 	"wget/ctx"
+	"wget/downloader"
 	"wget/fileio"
 	"wget/help"
 	"wget/xerr"
@@ -28,6 +29,14 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 		case arg == "-B":
 			Arguments.BackgroundMode = true
+			logFile := downloader.CheckIfFileExists("wget-log")
+			fd, err := os.Create(logFile)
+			if err != nil {
+				xerr.WriteError(fmt.Errorf("failed to create %q: defaulting to normal", logFile), 2, false)
+				continue
+			}
+			fmt.Printf("Output will be written to %s\n", logFile)
+			os.Stdout = fd // change the standard output to the log file
 
 		case strings.HasPrefix(arg, "-P="):
 			isParsed, path := IsPathFlag(arg)
@@ -92,8 +101,8 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 // ToBytes converts a rateLimit in string format to bytes, if no suffix is supplied then the value is considered in bytes
 // the only suffixes allowed are (k == kilobytes) and (M == megabytes)
-// example when user passes: 20k toBytes returns 20000
-// example when user passes: 20M toBytes returns 20000000
+// example when user passes: 20k ToBytes returns 20000
+// example when user passes: 20M ToBytes returns 20000000
 func ToBytes(rateLimit string) (rateLimitBytes int64) {
 	// 1k == 1000 bytes
 	// 1M == 1_000_000 bytes

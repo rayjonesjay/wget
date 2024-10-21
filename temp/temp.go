@@ -21,10 +21,7 @@ func Dir() string {
 	cm.Lock()
 	defer cm.Unlock()
 	tempDir = path.Join(os.TempDir(), info.Org)
-	err := os.MkdirAll(tempDir, 0775)
-	if err != nil {
-		panic(err)
-	}
+	_ = os.MkdirAll(tempDir, 0775)
 	return tempDir
 }
 
@@ -35,10 +32,5 @@ func Dir() string {
 // It is the caller's responsibility to remove the file when it is no longer needed.
 func File() (*os.File, error) {
 	// Create a temporary file inside the tmp directory
-	tempFile, err := os.CreateTemp(Dir(), "*.wget.tmp")
-	if err != nil {
-		return nil, err
-	}
-
-	return tempFile, nil
+	return os.CreateTemp(Dir(), "*.wget.tmp")
 }

@@ -3,6 +3,7 @@ package httpx
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -61,3 +62,46 @@ func FilenameFromContentDisposition(headers http.Header) (string, error) {
 
 	return matches[1], nil
 }
+
+// RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
+func RoundOfSizeOfData(dataInBytes int64) string {
+	var size float64
+	var unit string
+	if dataInBytes >= GB {
+		size = float64(dataInBytes) / GB
+		unit = "GB"
+	} else if dataInBytes >= KB {
+		size = float64(dataInBytes) / MB
+		unit = "MB"
+	} else {
+		size = float64(dataInBytes)
+		unit = "KB"
+	}
+	return fmt.Sprintf("%.2f%s", size, unit)
+}
+
+const (
+	// KB Size of Data in KiloBytes
+	KB = 1000 * 1
+
+	// KiB Size of Data in KibiBytes, same as 2^10
+	KiB = 1 << (10 * 1)
+
+	// MB Size of Data in MegaBytes
+	MB = 1000 * KB
+
+	// MiB Size of Data in MebiBytes, same as 2^20
+	MiB = 1 << 20
+
+	// GB Size of Data in GigaBytes
+	GB = 1000 * MB
+
+	// GiB Size of Data in GibiBytes, same as 2^30
+	GiB = 1 << 30
+
+	// TB Size of Data in TeraBytes
+	TB = 1000 * GB
+
+	// TiB Size of Data in TebiBytes, same as 2^40
+	TiB = 1 << 40
+)
