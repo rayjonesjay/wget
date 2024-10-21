@@ -73,6 +73,12 @@ WGET is a utility that recreates some of the core functionalities of the origina
 │       ├── url.go
 │       └── url_test.go
 ├── README.md
+├── syscheck
+│   ├── system.go
+│   └── system_test.go
+├── temp
+│   ├── temp.go
+│   └── temp_test.go
 ├── TESTS.md
 ├── xerr
 │   ├── xerr.go
@@ -81,7 +87,7 @@ WGET is a utility that recreates some of the core functionalities of the origina
     ├── xurl.go
     └── xurl_test.go
 
-20 directories, 49 files
+20 directories, 48 files
 ```
 
 ## Features
