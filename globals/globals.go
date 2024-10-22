@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"golang.org/x/net/html"
 	"io"
+	"sync"
 	"wget/syscheck"
 )
 
@@ -81,12 +82,25 @@ func FormatSize(size int64) string {
 	}
 }
 
+// printLinesMutex is a global mutex locker for PrintLines
+var printLinesMutex = &sync.Mutex{}
+
 // PrintLines prints multiple lines of text starting from a specific row.
 func PrintLines(baseRow int, lines []string) {
+	printLinesMutex.Lock()
+	defer printLinesMutex.Unlock()
 	for i, line := range lines {
 		i++
 		syscheck.MoveCursor(baseRow + i) // move to the correct line
 		fmt.Print("\033[K")              // clear the line
 		fmt.Print(line)
 	}
+}
+
+// StringTimes returns an array containing n instances of the given string
+func StringTimes(s string, n int) (out []string) {
+	for i := 0; i < n; i++ {
+		out = append(out, s)
+	}
+	return
 }

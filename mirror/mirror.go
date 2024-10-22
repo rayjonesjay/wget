@@ -3,6 +3,7 @@ package mirror
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/net/html"
 	"io"
 	"log"
@@ -21,6 +22,7 @@ import (
 	"wget/httpx"
 	"wget/mirror/links"
 	"wget/mirror/xurl"
+	"wget/syscheck"
 	"wget/temp"
 )
 
@@ -67,6 +69,8 @@ type arg struct {
 	// recursively, this integer keeps the number of mirrored URLS, thus, can be used
 	// to assign unique integer IDs to each downloads
 	d int
+	// df records the total number of bytes downloaded in the process of this mirror
+	df int64
 }
 
 // UrlDownloadInfo keeps the results of downloading a given URL,
@@ -100,8 +104,25 @@ func Site(cxt ctx.Context, mirrorUrl string) error {
 		parse.Scheme = "http"
 	}
 
+	syscheck.MoveCursor(1)
+	syscheck.ClearScreen()
+	syscheck.HideCursor()
+	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
+
 	m.init()
+	startTime := time.Now()
 	_, err = m.Site(parse.String())
+	endTime := time.Now()
+	duration := endTime.Sub(startTime).Truncate(time.Second)
+	fmt.Printf("\n\nFINISHED --%s--\n"+
+		"Total wall clock time: %s\n"+
+		"Downloaded: %d files, %s in %s\n",
+		time.Now().Format("2006-01-02 15:04:05"),
+		duration.String(),
+		m.d,
+		globals.FormatSize(m.df),
+		duration.String(),
+	)
 	return err
 }
 
@@ -168,7 +189,7 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 
 	// define a download status listener for the current mirror URL
 	status := fetch.DownloadStatus{}
-	status.OnUpdate = func(status *fetch.DownloadStatus) {
+	status.OnUpdate = func(status *fetch.DownloadStatus, hint int) {
 		// whenever the status of this download has changed, we print the progress to its
 		// respective position in the terminal
 		globals.PrintLines(
@@ -184,13 +205,23 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	}
 
 	// configure an Advanced Progress Listener for the GET request
-	advancedProgressListener := status.ProgressListener()
+	advancedProgressListener := *status.ProgressListener()
 	{
 		// need to increment the ID when the download actually starts, inject an onstart listener
 		originalOnStart := advancedProgressListener.OnStart
 		advancedProgressListener.OnStart = func(time time.Time) {
-			originalOnStart(time)
 			a.d++
+			originalOnStart(time)
+		}
+	}
+	{
+		// need to keep track of the total bytes downloaded
+		originalOnDownloadFinished := advancedProgressListener.OnDownloadFinished
+		advancedProgressListener.OnDownloadFinished = func(url string, time time.Time) {
+			originalOnDownloadFinished(url, time)
+			a.mutex.Lock()
+			a.df += status.Downloaded
+			a.mutex.Unlock()
 		}
 	}
 
