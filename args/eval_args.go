@@ -255,7 +255,7 @@ func InputFile(s string) (bool, string) {
 	if re.MatchString(s) {
 		matches := re.FindStringSubmatch(s)
 		filename := matches[2]
-		if filename == "." || filename == ".." || strings.HasPrefix(filename, "/") {
+		if filename == "." || filename == ".." {
 			return false, ""
 		}
 		return true, filename
