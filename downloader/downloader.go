@@ -65,7 +65,7 @@ func (a *arg) Download() error {
 			outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
 
 			GetFile := func(downloadUrl string, header http.Header) (*os.File, error) {
-				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE, 0644)
 			}
 
 			// define a download status listener for the current mirror URL
