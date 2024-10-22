@@ -6,6 +6,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"wget/downloader"
 	"wget/fileio"
 	"wget/help"
+	"wget/info"
 	"wget/xerr"
 	"wget/xurl"
 )
@@ -21,27 +24,36 @@ import (
 // DownloadContext builds and returns the download context,
 // as defined by (parsing and evaluating) the commandline arguments.
 func DownloadContext(arguments []string) (Arguments ctx.Context) {
+
+	length := len(arguments)
+
 	for _, arg := range arguments {
 
 		switch {
-		case arg == "--help":
-			xerr.WriteError(help.Manual, 0, true)
+		case arg == "--help" || arg == "-h":
+			xerr.WriteError(help.PrintManPage(), 0, true)
 
-		case arg == "-B":
+		case arg == "-B" || arg == "--background":
 			Arguments.BackgroundMode = true
+			if len(arguments) == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			logFile := downloader.CheckIfFileExists("wget-log")
 			fd, err := os.Create(logFile)
 			if err != nil {
-				xerr.WriteError(fmt.Errorf("failed to create %q: defaulting to normal", logFile), 2, false)
-				continue
+				xerr.WriteError(fmt.Errorf("failed to create %q defaulting to stdout", logFile), 2, false)
 			}
 			fmt.Printf("Output will be written to %s\n", logFile)
-			os.Stdout = fd // change the standard output to the log file
+			// defer fd.Close() // this needs to be tested
+			os.Stdout = fd // Instead of sending output to standard output (stdout) send to wget-log
 
 		case strings.HasPrefix(arg, "-P="):
 			isParsed, path := IsPathFlag(arg)
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			if isParsed {
-				Arguments.SavePath = path
+				Arguments.SavePath = CreateDirFromPath(path)
 			}
 
 		case strings.HasPrefix(arg, "-i="):
@@ -68,35 +80,93 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			Arguments.ConvertLinks = true
 
 		case strings.HasPrefix(arg, "-O="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			if ok, file := IsOutputFlag(arg); ok && file != "" {
 				Arguments.OutputFile = file
 			}
 
 		case strings.HasPrefix(arg, "--rate-limit="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			Arguments.RateLimit = strings.TrimPrefix(arg, "--rate-limit=")
 			Arguments.RateLimitValue = ToBytes(Arguments.RateLimit)
 
 		case strings.HasPrefix(arg, "-R="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			rejects := strings.Split(strings.TrimPrefix(arg, "-R="), ",")
 			Arguments.Rejects = append(Arguments.Rejects, rejects...)
 
 		case strings.HasPrefix(arg, "--reject="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			rejects := strings.Split(strings.TrimPrefix(arg, "--reject="), ",")
 			Arguments.Rejects = append(Arguments.Rejects, rejects...)
 
 		case strings.HasPrefix(arg, "-X="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			excludes := strings.Split(strings.TrimPrefix(arg, "-X="), ",")
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
 		case strings.HasPrefix(arg, "--exclude="):
+			if length == 1 {
+				xerr.WriteError(help.UsageMessage, 1, true)
+			}
 			excludes := strings.Split(strings.TrimPrefix(arg, "--exclude="), ",")
 			Arguments.Exclude = append(Arguments.Exclude, excludes...)
 
+		case arg == "--version" || arg == "-v":
+			xerr.WriteError(info.VersionText(), 0, true)
+
 		default:
-			Arguments.Links = append(Arguments.Links, arg)
+			// if arg gets here and fails it wont be added to the urls flag
+			url, isValid, err := xurl.IsValidURL(arg)
+			if !isValid {
+				xerr.WriteError(err, 1, false)
+			}
+			if isValid {
+				Arguments.Links = append(Arguments.Links, url)
+			}
 		}
 	}
+
+	// if no links have been supplied through the command line then our program is useless - exit
+	if len(Arguments.Links) == 0 {
+		xerr.WriteError(help.UsageMessage, 1, true)
+	}
+
 	return
+}
+
+// CreateDirFromPath creates a directory from given dirPath and returns a clean path
+// if dirPath does not exist it is created
+func CreateDirFromPath(dirPath string) string {
+
+	// check for tilde '~` symbol and replace with
+	if strings.HasPrefix(dirPath, "~") {
+		dirPath = strings.Replace(dirPath, "~", "/home", 1)
+	}
+	// clean the path by:
+	//removing more than one consecutive backslashes
+	//replacing '.' with nothing
+	//replacing '..' and replace all non-.. preceding it with nothing
+	dirPath = path.Clean(dirPath)
+
+	absolutePath, _ := filepath.Abs(dirPath)
+
+	err := os.MkdirAll(absolutePath, 0755)
+	if err != nil {
+		return "./"
+	}
+
+	return absolutePath
 }
 
 // ToBytes converts a rateLimit in string format to bytes, if no suffix is supplied then the value is considered in bytes

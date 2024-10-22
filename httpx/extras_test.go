@@ -213,3 +213,28 @@ func TestFilenameFromContentDisposition(t *testing.T) {
 		)
 	}
 }
+
+func TestRoundOfSizeOfData(t *testing.T) {
+	tests := []struct {
+		name  string
+		input int64
+		want  string
+	}{
+		{"A-TEST", 200, "200.00KB"},
+		{"B-TEST", 1_000_000, "1.00MB"},
+		{"C-TEST", 1_000_000_000, "1.00GB"},
+		{"D-TEST", 1_000_000_000_000, "1000.00GB"},
+		{"E-TEST", 1, "1.00KB"},
+		{"F-TEST", 234, "234.00KB"},
+		{"G-TEST", 213_432, "0.21MB"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := RoundOfSizeOfData(tt.input)
+			if got != tt.want {
+				t.Errorf("RoundOfSizeOfData(%d) == %s want %s", tt.input, got, tt.want)
+			}
+		})
+	}
+}

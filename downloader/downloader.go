@@ -61,7 +61,6 @@ func (a *arg) Download() error {
 	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
 
 	for lineNumber, url := range a.Links {
-		//lineNumber++
 
 		wg.Add(1)
 		go func(url string, rowOffset int) {
@@ -151,7 +150,8 @@ func (a *arg) Download() error {
 	}
 
 	fmt.Println(syscheck.GetCurrentTime(false))
-	//fmt.Print("\033[?25h")
+
+	fmt.Println(a.OutputFile)
 	return nil
 }
 
@@ -179,17 +179,6 @@ func CalculateETA(downloaded, total int64, elapsed time.Duration) string {
 	return eta.String()
 }
 
-// Format time into a human-readable string.
-func formattedTime(seconds int64) string {
-	if seconds >= 3600 {
-		return fmt.Sprintf("%dh", seconds/3600)
-	} else if seconds >= 60 {
-		return fmt.Sprintf("%dm", seconds/60)
-	} else {
-		return fmt.Sprintf("%ds", seconds)
-	}
-}
-
 // CheckIfFileExists will check if fname exists in the provided path if it exists it will add
 // a number starting from 1 between the filename and the beginning of extension
 // example: if file.txt exist CheckIfFileExist will generate a new name file1.txt. It does this iteratively.
@@ -212,27 +201,17 @@ func CheckIfFileExists(fname string) string {
 			return fname
 		}
 
-		fname = fmt.Sprintf("%s%d%s", base, n, extension)
+		fname = fmt.Sprintf("%s(%d)%s", base, n, extension)
 		n++
 	}
 }
 
-/*
-start at 2017-10-14 03:46:06
-sending request, awaiting response... status 200 OK
-content size: 56370 [~0.06MB]
-saving file to: ./meme.jpg
- 55.05 KiB / 55.05 KiB [================================================================================================================] 100.00% 1.24 MiB/s 0s
-
-Downloaded [https://pbs.twimg.com/media/EMtmPFLWkAA8CIS.jpg]
-finished at 2017-10-14 03:46:07
-*/
 // determineOutputPath determines the full path for the output file
 func (a *arg) determineOutputPath(url string) string {
 	var outputFilePath string
 
 	if a.OutputFile != "" {
-		outputFilePath = a.OutputFile
+		outputFilePath = filepath.Join(a.SavePath, a.OutputFile)
 	} else {
 		// get the filename from the url
 		tokens := strings.Split(url, "/")
@@ -292,25 +271,6 @@ func (a *arg) MirrorWeb() error {
 		if err != nil {
 			return err
 		}
-		//parsedUrl, err := url.Parse(link)
-		//if err != nil {
-		//	return err
-		//}
-		//
-		//// by default the downloaded data will be saved to the name of domain if not specified
-		//domain := parsedUrl.Host
-		//directoryToSaveData := filepath.Join(a.SavePath, domain)
-		//
-		//err = os.MkdirAll(directoryToSaveData, 0755)
-		//if err != nil {
-		//	return err
-		//}
-
-		// Download and parse the HTML/CSS
-		//err = a.downloadAndParseHTML(link, directoryToSaveData)
-		//if err != nil {
-		//	return err
-		//}
 	}
 	return nil
 }
