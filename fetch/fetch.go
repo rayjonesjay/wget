@@ -72,6 +72,29 @@ type AdvancedProgressListener struct {
 	OnDownloadFinished func(url string, time time.Time)
 }
 
+// init initializes the receiver progress listener, in place, with the default no-op status listeners
+func (from *AdvancedProgressListener) init() {
+	l := from
+	if from.OnStart == nil {
+		l.OnStart = func(time time.Time) {}
+	}
+	if from.OnStatus == nil {
+		l.OnStatus = func(status string, code int) {}
+	}
+	if from.OnContentLength == nil {
+		l.OnContentLength = func(length int64) {}
+	}
+	if from.OnGetFile == nil {
+		l.OnGetFile = func(filename string) {}
+	}
+	if from.OnProgress == nil {
+		l.OnProgress = func(downloaded, total int64, rate int32) {}
+	}
+	if from.OnDownloadFinished == nil {
+		l.OnDownloadFinished = func(url string, time time.Time) {}
+	}
+}
+
 // Config contains configuration options for URL
 type Config struct {
 	// GetFile will be called to return a valid file, with write access, to hold the resource from the
@@ -125,7 +148,17 @@ func URL(url string, config Config) (info FileInfo, err error) {
 		if config.Method == "" {
 			config.Method = "GET"
 		}
+
+		config.AdvancedProgressListener.init()
 	}
+
+	defer func() {
+		if err != nil {
+			config.AdvancedProgressListener.OnDownloadFinished("", time.Now())
+		} else {
+			config.AdvancedProgressListener.OnDownloadFinished(url, time.Now())
+		}
+	}()
 
 	req, err := http.NewRequest(config.Method, url, config.Body)
 	if err != nil {
@@ -137,6 +170,7 @@ func URL(url string, config Config) (info FileInfo, err error) {
 
 	// Send the request
 	config.AdvancedProgressListener.OnStart(time.Now())
+	config.AdvancedProgressListener.OnStatus("", -1)
 	resp, err := client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("failed to download file: %v", err)
@@ -144,19 +178,19 @@ func URL(url string, config Config) (info FileInfo, err error) {
 	}
 	defer fileio.Close(resp.Body)
 
+	config.AdvancedProgressListener.OnStatus(resp.Status, resp.StatusCode)
 	if config.ShouldDownload != nil && !config.ShouldDownload(url, resp.Header) {
 		err = fmt.Errorf("skipping download of url: %q", url)
 		return
 	}
 
 	if config.AllowedStatusCodes != nil && !slices.Contains(config.AllowedStatusCodes, resp.StatusCode) {
-		err = fmt.Errorf("wrong status code: %v", resp.StatusCode)
+		err = fmt.Errorf("bad status code: %v", resp.Status)
 		return
 	}
 
 	info.Headers = resp.Header
 	info.StatusCode = resp.StatusCode
-	config.AdvancedProgressListener.OnStatus(resp.Status, resp.StatusCode)
 
 	contentLength := httpx.ExtractContentLength(resp.Header)
 	config.AdvancedProgressListener.OnContentLength(contentLength)
@@ -220,7 +254,6 @@ func URL(url string, config Config) (info FileInfo, err error) {
 		config.AdvancedProgressListener.OnProgress(downloadedBytes, contentLength, -1)
 	}
 
-	config.AdvancedProgressListener.OnDownloadFinished(url, time.Now())
 	return info, nil
 }
 
@@ -229,45 +262,92 @@ type DownloadStatus struct {
 	StatusCode    int
 	Status        string
 	Start         string
-	End           string
 	SavePath      string
 	ContentLength string
 	Progress      string
 	Finished      string
+	End           string
+
+	// StartTime records the time the download started
+	StartTime time.Time
 
 	Downloaded, Total int64
 	Rate              int32
 	// OnUpdate will be called whenever the download status (of this struct) changes.
 	// A reference to this struct is provided for convenience
-	OnUpdate func(status *DownloadStatus)
+	OnUpdate func(status *DownloadStatus, hint int)
 	// m mutex locker. Some status update operations, such as Progress, may be
 	// changed by different threads; this locker will manage race conditions that may
 	// arise
 	m *sync.Mutex
+	// n is the number os statistical observations, of the Rate, to be used in
+	// calculating the moving average of the Rate
+	n int
+	// avgRate is the average Rate of the download
+	avgRate int32
+}
+
+// GetField returns the field of the Task based on the provided index.
+func (s *DownloadStatus) GetField(index int) string {
+	switch index {
+	case 0:
+		return s.Start
+	case 1:
+		return s.Status
+	case 2:
+		return s.ContentLength
+	case 3:
+		return s.SavePath
+	case 4:
+		return s.Progress
+	case 5:
+		return s.Finished
+	case 6:
+		return s.End
+	default:
+		panic("Index out of range")
+	}
 }
 
 // ProgressListener builds a compliant advanced download progress listener, that
 // reports its download status to the receiver DownloadStatus
-func (s *DownloadStatus) ProgressListener() (l AdvancedProgressListener) {
+func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
+	l := &AdvancedProgressListener{}
 	if s.m == nil {
 		s.m = new(sync.Mutex)
+	}
+
+	if s.OnUpdate == nil {
+		panic("You must initialize [OnUpdate] before this call")
 	}
 
 	m := s.m
 	l.OnStart = func(t time.Time) {
 		s.Start = fmt.Sprintf("start at %s", format(t))
+		s.StartTime = t
+		s.OnUpdate(s, 0)
 	}
 
 	l.OnStatus = func(status string, _ int) {
+		if status != "" {
+			status = fmt.Sprintf("status %s", status)
+		}
 		s.Status = fmt.Sprintf("\rsending request, awaiting response... %s\n", status)
+		s.OnUpdate(s, 1)
 	}
 
 	l.OnContentLength = func(length int64) {
-		s.ContentLength = fmt.Sprintf("\rcontent size: %d [~%s]\n", length, httpx.RoundOfSizeOfData(length))
+		if length < 0 {
+			s.ContentLength = fmt.Sprintf("\rcontent size: unspecified [~%s]\n", globals.FormatSize(length))
+		} else {
+			s.ContentLength = fmt.Sprintf("\rcontent size: %d [~%s]\n", length, globals.FormatSize(length))
+		}
+		s.OnUpdate(s, 2)
 	}
 
 	l.OnGetFile = func(filename string) {
 		s.SavePath = fmt.Sprintf("saving file to: %s", filename)
+		s.OnUpdate(s, 3)
 	}
 
 	l.OnProgress = func(downloaded, total int64, rate int32) {
@@ -281,31 +361,79 @@ func (s *DownloadStatus) ProgressListener() (l AdvancedProgressListener) {
 			s.Total = total
 		}
 
-		progress := float64(downloaded) / float64(total)
-		width := syscheck.GetTerminalWidth()
-		barLength := width / 3
-		filled := int(progress * float64(barLength))
-		notFilled := barLength - filled
+		// update the moving average of the download rate
+		if rate > 0 {
+			s.avgRate = int32(updateAverage(float64(s.avgRate), float64(rate), s.n))
+			s.n++
+		}
 
-		bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", filled), strings.Repeat(" ", notFilled))
-		percentage := (downloaded * 100) / total
-		eta := CalculateETA(s.Downloaded, s.Total, s.Rate)
-
-		s.Progress = fmt.Sprintf(
-			"%s / %s %s %d%% %s %s",
-			globals.FormatSize(downloaded), globals.FormatSize(total), bar, percentage,
-			globals.FormatSize(int64(rate))+"/s", eta,
-		)
-
-		s.OnUpdate(s)
+		s.Progress = onProgress(s.Downloaded, s.Total, s.Rate, "")
+		s.OnUpdate(s, 4)
 	}
 
 	l.OnDownloadFinished = func(url string, t time.Time) {
+		if url == "" {
+			// this download failed
+			s.Finished = fmt.Sprintf("\u001B[0;31m\nfailed at %s\u001B[0m", format(t))
+			s.OnUpdate(s, 5)
+			return
+		}
+
 		s.Finished = fmt.Sprintf("Downloaded [%s]\u001B[0;32m\nfinished at %s\u001B[0m", url, format(t))
-		s.OnUpdate(s)
+		s.OnUpdate(s, 5)
+		duration := t.Sub(s.StartTime).Truncate(time.Second)
+		if s.Total == -1 {
+			s.Total = s.Downloaded
+			l.OnContentLength(s.Downloaded)
+			s.OnUpdate(s, 2)
+		}
+		s.Progress = onProgress(s.Downloaded, s.Total, s.avgRate, duration.String())
+		s.OnUpdate(s, 4)
 	}
 
-	return
+	return l
+}
+
+func onProgress(downloaded, total int64, rate int32, eta string) string {
+	width := syscheck.GetTerminalWidth()
+	barLength := width / 3
+	percentageString := "--.-%"
+
+	bar := ""
+	progress := float64(0)
+	percentage := float64(0)
+	if total <= 0 {
+		bar = fmt.Sprintf("[<=>%s]", strings.Repeat(" ", barLength-3))
+	} else {
+		progress = float64(downloaded) / float64(total)
+		percentage = float64(downloaded*100) / float64(total)
+
+		filled := int(progress * float64(barLength))
+		notFilled := barLength - filled
+		repeat := func(s string, count int) string {
+			if count == 0 && barLength > 1 {
+				return ">"
+			} else if count > 0 {
+				return strings.Repeat(s, count-1) + ">"
+			}
+			return strings.Repeat(s, count)
+		}
+
+		bar = fmt.Sprintf("[%s%s]", repeat("=", filled), strings.Repeat(" ", notFilled))
+		percentageString = fmt.Sprintf("%.2f%%", percentage)
+	}
+
+	if eta == "" {
+		eta = "eta " + CalculateETA(downloaded, total, rate)
+	} else {
+		eta = "in " + eta
+	}
+
+	return fmt.Sprintf(
+		" %s / %s %s %s %s %s",
+		globals.FormatSize(downloaded), globals.FormatSize(total), bar, percentageString,
+		globals.FormatSize(int64(rate))+"/s", eta,
+	)
 }
 
 // setClientHeaders updates the pointed request http.Header with the default client headers
@@ -321,10 +449,16 @@ func format(t time.Time) string {
 
 // CalculateETA estimates the time left for a download.
 func CalculateETA(downloaded, total int64, rate int32) string {
-	if downloaded == 0 { // to avoid division by zero
+	if downloaded == 0 || total < 0 || rate == 0 { // to avoid division by zero
 		return "🕛"
 	}
 	remaining := float64(total-downloaded) / float64(rate)
 	eta := time.Duration(remaining) * time.Second
 	return eta.String()
+}
+
+// updateAverage calculates the new average given the current average, the new observation,
+// and the number of observations.
+func updateAverage(currentAvg float64, newObservation float64, n int) float64 {
+	return ((currentAvg * float64(n)) + newObservation) / float64(n+1)
 }

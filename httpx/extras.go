@@ -64,6 +64,8 @@ func FilenameFromContentDisposition(headers http.Header) (string, error) {
 }
 
 // RoundOfSizeOfData  converts dataInBytes (size of file downloaded) in bytes to the nearest size
+//
+// Deprecated: Use [globals.FormatSize] instead
 func RoundOfSizeOfData(dataInBytes int64) string {
 	var size float64
 	var unit string

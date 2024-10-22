@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 	"wget/ctx"
 	"wget/fetch"
+	"wget/globals"
 	"wget/mirror"
 	"wget/syscheck"
 )
@@ -25,34 +25,29 @@ type arg struct {
 	*ctx.Context
 }
 
-var (
-	// DefaultDownloadDirectory is the default location where files retrieved will reside.
-	DefaultDownloadDirectory = "$HOME/Downloads"
-
-	// DefaultHTTPPort is the default port used by http if not specified.
-	DefaultHTTPPort = "80"
-
-	// DefaultHTTPSPort is the default port used by https if not specified.
-	DefaultHTTPSPort = "443"
-)
-
 // Get downloads any files, website mirrors, or resources as defined by the provided download context
 func Get(c ctx.Context) {
 	a := arg{Context: &c}
-	err := a.Get()
+	var err error
+	var dType string
+	if a.Mirror {
+		// run in mirror mode
+		err = a.MirrorWeb()
+		dType = "mirror"
+	} else {
+		// regular download
+		err = a.Download()
+		dType = "download"
+	}
 	if err != nil {
-		// TODO: handle errors during downloads
-		panic(err)
+		syscheck.ShowCursor()
+		fmt.Printf("\n%s failed: %v\n", dType, err)
 	}
 }
-
-var width = syscheck.GetTerminalWidth()
-var mu sync.Mutex
 
 // Download handles each download and prints progress across 6 lines.
 func (a *arg) Download() error {
 	var wg sync.WaitGroup
-
 	successfulDownloads := make(chan string, len(a.Links))
 
 	syscheck.MoveCursor(1)
@@ -60,78 +55,54 @@ func (a *arg) Download() error {
 	syscheck.HideCursor()
 	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
 
-	for lineNumber, url := range a.Links {
-
+	// how many rows each download progress indicator for a given link is allocated
+	rows := 8
+	for i, url := range a.Links {
+		lineNumber := i
 		wg.Add(1)
-		go func(url string, rowOffset int) {
+		go func() {
 			defer wg.Done()
-
-			startTime := time.Now()
-
 			outputFilePath := CheckIfFileExists(a.determineOutputPath(url))
 
 			GetFile := func(downloadUrl string, header http.Header) (*os.File, error) {
 				return os.OpenFile(outputFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 			}
 
+			// define a download status listener for the current mirror URL
+			status := fetch.DownloadStatus{}
+			status.OnUpdate = func(status *fetch.DownloadStatus, hint int) {
+				// whenever the status of this download has changed, we print the progress to its
+				// respective position in the terminal
+				globals.PrintLines((lineNumber*rows)+hint, []string{status.GetField(hint)})
+			}
+			globals.PrintLines(lineNumber*rows, globals.StringTimes("\033[38;5;208m···\033[0m", rows-1))
+
+			// configure an Advanced Progress Listener for the GET request
+			advancedProgressListener := *status.ProgressListener()
 			_, err := fetch.URL(
-				url, fetch.Config{
-					GetFile: GetFile,
-					Limit:   0,
-					ProgressListener: func(downloaded, total int64) {
-						progress := float64(downloaded) / float64(total)
-						barLength := width / 3
-						filled := int(progress * float64(barLength))
-						notFilled := barLength - filled
-
-						bar := fmt.Sprintf("[%s%s]", strings.Repeat("=", filled), strings.Repeat(" ", notFilled))
-						percentage := (downloaded * 100) / total
-						eta := CalculateETA(downloaded, total, time.Since(startTime))
-
-						mu.Lock() // Avoid race conditions on terminal output
-						PrintLines(
-							rowOffset, []string{
-								"@@", "@@@", "@@@@",
-								//fetch.Status.Start,
-								//fetch.Status.Status + fmt.Sprintf("%d", fetch.Status.StatusCode),
-								//fetch.Status.ContentLength,
-								fmt.Sprintf("saving file to: %s", outputFilePath),
-								fmt.Sprintf(
-									"%s / %s %s %d%% %s", formatSize(downloaded), formatSize(total), bar, percentage,
-									eta,
-								),
-							},
-						)
-						mu.Unlock()
-					},
-					RateListener:       func(rate int32) {},
-					Body:               nil,
-					Method:             "GET",
-					AllowedStatusCodes: []int{http.StatusOK},
+				url,
+				fetch.Config{
+					GetFile:                  GetFile,
+					Limit:                    int32(a.RateLimitValue),
+					ProgressListener:         nil,
+					RateListener:             nil,
+					Body:                     nil,
+					Method:                   "GET",
+					AllowedStatusCodes:       []int{http.StatusOK},
+					AdvancedProgressListener: advancedProgressListener,
 				},
 			)
 
 			if err != nil {
-				mu.Lock()
-				PrintLines(
-					rowOffset+8, []string{
-						fmt.Sprintf("Error: %s", err.Error()),
-					},
-				)
-				mu.Unlock()
+				errString := fmt.Sprintf("error: %s", err.Error())
+				errString = strings.Replace(errString, "\n", " : ", -1)
+				globals.PrintLines((lineNumber*rows)+5, []string{errString})
 			} else {
 				if lineNumber != len(a.Links) {
 					successfulDownloads <- url
-					mu.Lock()
-					PrintLines(
-						rowOffset+5, []string{
-							syscheck.GetCurrentTime(false),
-						},
-					)
-					mu.Unlock()
 				}
 			}
-		}(url, lineNumber*7) // Reserve 7 lines per download
+		}()
 	}
 
 	// wait for all go routines to finish in order to close the channel
@@ -144,64 +115,42 @@ func (a *arg) Download() error {
 	for url := range successfulDownloads {
 		successList = append(successList, url)
 	}
-	if len(successList) != 0 {
-		// Print the successfully downloaded URLs
-		printUrls(successList)
+
+	if len(a.Links) != 0 {
+		// move the cursor to the terminal row after the last progress
+		syscheck.MoveCursor(len(a.Links) * rows)
 	}
 
-	fmt.Println(syscheck.GetCurrentTime(false))
+	if len(successList) > 1 {
+		// Print the successfully downloaded URLs
+		fmt.Printf("\nDownloads finished:\t%v\n", successList)
+	}
 
-	fmt.Println(a.OutputFile)
 	return nil
 }
 
-// PrintLines prints multiple lines of text starting from a specific row.
-func PrintLines(baseRow int, lines []string) {
-	for i, line := range lines {
-		i++
-		syscheck.MoveCursor(baseRow + i) // move to the correct line
-		fmt.Print("\033[K")              // clear the line
-		fmt.Print(line)
-	}
-}
-
-// CalculateETA estimates the time left for a download.
-func CalculateETA(downloaded, total int64, elapsed time.Duration) string {
-
-	if downloaded == 0 { // to avoid division by zero
-		return "🕛"
-	}
-
-	rate := float64(downloaded) / elapsed.Seconds()
-	remaining := float64(total-downloaded) / rate
-
-	eta := time.Duration(remaining) * time.Second
-	return eta.String()
-}
-
-// CheckIfFileExists will check if fname exists in the provided path if it exists it will add
+// CheckIfFileExists checks if a file with the provided name exists. If it exists, it will add
 // a number starting from 1 between the filename and the beginning of extension
 // example: if file.txt exist CheckIfFileExist will generate a new name file1.txt. It does this iteratively.
-func CheckIfFileExists(fname string) string {
-
-	if strings.TrimSpace(fname) == "" {
+func CheckIfFileExists(filename string) string {
+	if strings.TrimSpace(filename) == "" {
 		return ""
 	}
 	// get the file extension
-	extension := filepath.Ext(fname)
-	base := fname
+	extension := filepath.Ext(filename)
+	base := filename
 	if extension != "" {
-		base = fname[:len(fname)-len(extension)]
+		base = filename[:len(filename)-len(extension)]
 	}
 	n := 1
 
 	for {
-		_, err := os.Stat(fname)
+		_, err := os.Stat(filename)
 		if os.IsNotExist(err) {
-			return fname
+			return filename
 		}
 
-		fname = fmt.Sprintf("%s(%d)%s", base, n, extension)
+		filename = fmt.Sprintf("%s(%d)%s", base, n, extension)
 		n++
 	}
 }
@@ -225,18 +174,6 @@ func (a *arg) determineOutputPath(url string) string {
 		}
 	}
 	return outputFilePath
-}
-
-func printUrls(urls []string) {
-	res := ""
-	for i, url := range urls {
-		if i != len(urls)-1 {
-			res += url + " "
-		} else {
-			res += url
-		}
-	}
-	fmt.Printf("\n\nDownloaded	[%s]\n", res)
 }
 
 // IsEmpty function checks whether an iterable is empty, an iterable is a string,array or slice.
@@ -264,44 +201,13 @@ func (a *arg) IsEmpty(data interface{}) bool {
 	}
 }
 
-func (a *arg) MirrorWeb() error {
-
+func (a *arg) MirrorWeb() (gErr error) {
 	for _, link := range a.Links {
 		err := mirror.Site(*a.Context, link)
 		if err != nil {
-			return err
+			gErr = err
+			continue
 		}
 	}
-	return nil
-}
-
-func (a *arg) Get() (err error) {
-	if a.Mirror {
-		// run in mirror mode
-		err = a.MirrorWeb()
-	} else {
-		// regular download
-		err = a.Download()
-	}
 	return
-}
-
-// Helper function to format byte size
-func formatSize(size int64) string {
-	const (
-		KB = 1 << 10
-		MB = 1 << 20
-		GB = 1 << 30
-	)
-
-	switch {
-	case size >= GB:
-		return fmt.Sprintf("%.2f GiB", float64(size)/GB)
-	case size >= MB:
-		return fmt.Sprintf("%.2f MiB", float64(size)/MB)
-	case size >= KB:
-		return fmt.Sprintf("%.2f KiB", float64(size)/KB)
-	default:
-		return fmt.Sprintf("%d B", size)
-	}
 }
