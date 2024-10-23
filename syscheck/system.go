@@ -7,7 +7,6 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
-	"wget/xerr"
 )
 
 // CheckOperatingSystem checks if the underlying operating system is neither Linux nor macOS
@@ -36,19 +35,10 @@ type terminal struct {
 // terminal holds the dimensions of the terminal. but we are only interested in the Col field, which stores the column
 // if the syscall fails we return an error
 func GetTerminalWidth() int {
-
 	fd := os.Stdout.Fd()
-
 	ws := &terminal{}
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
-	if err != 0 {
-		xerr.WriteError("cannot get terminal size, make sure you are using darwin or linux os", 1, false)
-	}
-	width := int(ws.Col)
-	if width < 65 {
-		xerr.WriteError("terminal size to small adjust width to at least 65", 1, false)
-	}
-	return int(width)
+	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
+	return int(ws.Col)
 }
 
 // MoveCursor moves the terminal cursor to the specified row, we don't need columns here
