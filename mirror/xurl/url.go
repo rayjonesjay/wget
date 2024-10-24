@@ -3,16 +3,9 @@ package xurl
 import (
 	"fmt"
 	"net/url"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
-
-// DownloadLocation records the names of the folder where a given resource should
-// be downloaded to, and the name of the file the resource should be written into
-type DownloadLocation struct {
-	FolderName, FileName string
-}
 
 // AbsoluteUrl returns an absolute URL from the given URL (relative or absolute),
 // with a basis on the given parent URL.
@@ -52,63 +45,6 @@ func AbsoluteUrl(parentURL, relativeURL string) (string, error) {
 
 	absolute := parent.ResolveReference(relative)
 	return absolute.String(), nil
-}
-
-// DownloadFolder returns the absolute filepath, from the current working
-// directory, where the resource retrieved from the given url should be
-// downloaded to.
-// The folder name and/or file name may be the `.` character, in
-// which case, the file should be downloaded to the current directory, and most
-// probably named the same as the current folder
-// This function assumes that the given url is a valid
-// url; if not, then the returned folder and file names will be empty strings
-func DownloadFolder(targetUrl string) (loc DownloadLocation) {
-	u, err := url.Parse(targetUrl)
-	if err != nil {
-		return
-	}
-
-	host := ""
-	if u.Host != "" {
-		host = u.Host + "/"
-	}
-
-	filePath := host + u.Path
-	loc.FolderName = filepath.Dir(filePath)
-	//loc.FileName = filepath.Base(u.Path)
-	loc.FileName = strings.TrimPrefix(filePath, loc.FolderName)
-	loc.FileName = strings.TrimPrefix(loc.FileName, "/")
-
-	if loc.FileName == "" {
-		loc.FileName = "."
-	}
-
-	return
-}
-
-// RelativeFolder calculates the relative path of the target folder from the parent folder
-func RelativeFolder(parent, target string) string {
-	if parent == "" {
-		return target
-	} else if target == "" {
-		return "."
-	} else if target == "/" {
-		return parent
-	}
-
-	// Clean the paths to handle different separators and potential issues.
-	parent = filepath.Clean(parent)
-	target = filepath.Clean(target)
-
-	// Calculate the relative target
-	rel, err := filepath.Rel(parent, target)
-
-	// Handle potential errors, particularly when paths are on different drives in Windows.
-	if err != nil {
-		return target
-	}
-
-	return rel
 }
 
 // TrimSlash returns a new url, with trailing slash character in the given url removed
