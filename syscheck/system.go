@@ -38,7 +38,11 @@ func GetTerminalWidth() int {
 	fd := os.Stdout.Fd()
 	ws := &terminal{}
 	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
-	return int(ws.Col)
+	width := int(ws.Col)
+	if width <= 0 {
+		return 300
+	}
+	return width
 }
 
 // MoveCursor moves the terminal cursor to the specified row, we don't need columns here
