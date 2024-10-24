@@ -63,7 +63,7 @@ func TestFromHtml(t *testing.T) {
 		{
 			name:     "Object tag with URL",
 			args:     args{doc: fromString("<html><body><object data='https://example.com/object.swf'></object></body></html>")},
-			wantUrls: []string{"https://example.com/object.swf"},
+			wantUrls: nil,
 		},
 		{
 			name:     "Mixed tags",

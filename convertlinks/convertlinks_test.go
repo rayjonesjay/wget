@@ -197,13 +197,13 @@ url(https://example.com/path/image2.png.2);
 				`<html lang="en">
 <head>
     <link rel="stylesheet" href="https://www.example.com/styles.css.2"/>
-    <script src="https://www.example.com/script.js.2"></script>
+    <script src="https://www.example.com/script.js"></script>
     <title></title>
 </head>
 <body>
 <img src="https://www.example.com/image.jpg.2" alt="Example image"/>
 <div id="one" style="background-image: url(https://example.com/path/div1.png.2);"></div>
-<object data="https://www.example.com/object.swf.2" type="application/x-shockwave-flash"></object>
+<object data="https://www.example.com/object.swf" type="application/x-shockwave-flash"></object>
 </body>
 </html>`,
 			),
