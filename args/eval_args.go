@@ -5,6 +5,7 @@ package args
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -191,7 +192,7 @@ func ToBytes(rateLimit string) (rateLimitBytes int64) {
 
 	sizeN, err := strconv.Atoi(size)
 	if err != nil {
-		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
+		log.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
 		return 0
 	}
 
@@ -202,8 +203,8 @@ func ToBytes(rateLimit string) (rateLimitBytes int64) {
 		return int64(sizeN * 1000)
 	} else if suffix == "M" {
 		return int64(sizeN * 1000000)
-	} else if suffix != "M" && suffix != "k" {
-		fmt.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
+	} else if suffix != "" {
+		log.Printf("Unrecognized rate limit suffix %q defaulting to 0\n", rateLimit)
 		return 0
 	}
 	return int64(sizeN)
