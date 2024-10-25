@@ -4,6 +4,7 @@ package args
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -58,8 +59,8 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			}
 
 		case strings.HasPrefix(arg, "-i="):
-			isParsed, path := InputFile(arg)
-			if isParsed {
+			isParsed, path, err := InputFile(arg)
+			if isParsed && err == nil {
 				Arguments.InputFile = path
 				slice, err := ReadUrlFromFile(path)
 
@@ -250,18 +251,27 @@ func IsOutputFlag(arg string) (bool, string) {
 
 // InputFile recognizes if -i=<filename> has been parsed together with a valid filename that exist
 // if it does not exist or is empty returns false and empty string
-func InputFile(s string) (bool, string) {
+func InputFile(s string) (bool, string, error) {
 	pattern := `^(-i=)(.+)`
 	re := regexp.MustCompile(pattern)
 	if re.MatchString(s) {
 		matches := re.FindStringSubmatch(s)
-		filename := matches[2]
-		if filename == "." || filename == ".." {
-			return false, ""
+
+		containsAll := func(s string, c string) bool {
+			s = strings.TrimSpace(s)
+			return strings.Count(s, "/") == len(s)
 		}
-		return true, filename
+		filename := matches[2]
+
+		if containsAll(filename, "/") {
+			return false, "", errors.New("path is a directory")
+		}
+		if filename == "." || filename == ".." {
+			return false, "", errors.New("path is a directory")
+		}
+		return true, filename, nil
 	}
-	return false, ""
+	return false, "", errors.New("path might be empty")
 }
 
 // IsPathFlag returns true if -P flag has been used and a valid path has been specified
