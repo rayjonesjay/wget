@@ -139,11 +139,6 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 		}
 	}
 
-	// if no links have been supplied through the command line then our program is useless - exit
-	if len(Arguments.Links) == 0 {
-		xerr.WriteError(help.UsageMessage, 1, true)
-	}
-
 	return
 }
 
