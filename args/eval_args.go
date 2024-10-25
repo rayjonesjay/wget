@@ -259,7 +259,7 @@ func InputFile(s string) (bool, string, error) {
 
 		containsAll := func(s string, c string) bool {
 			s = strings.TrimSpace(s)
-			return strings.Count(s, "/") == len(s)
+			return strings.Count(s, c) == len(s)
 		}
 		filename := matches[2]
 
