@@ -50,7 +50,7 @@ func TestCheckIfFileExists(t *testing.T) {
 
 	// Test that CheckIfFileExists adds a number to duplicate filenames.
 	newFileName := CheckIfFileExists(fname)
-	expected := filepath.Join(tempDir, "file1.txt")
+	expected := filepath.Join(tempDir, "file(1).txt")
 	if newFileName != expected {
 		t.Fatalf("Expected %s but got %s", expected, newFileName)
 	}
