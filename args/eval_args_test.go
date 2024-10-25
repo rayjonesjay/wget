@@ -1,6 +1,7 @@
 package args
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 	"wget/ctx"
@@ -64,24 +65,35 @@ func TestIsPathFlag(t *testing.T) {
 // TestInputFile is a test function for InputFile function
 func TestInputFile(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		want1 bool
-		want2 string
+		name    string
+		input   string
+		want1   bool
+		want2   string
+		wantErr error
 	}{
-		{"test1", "-i=file.txt", true, "file.txt"},
-		{"test2", "-i=file", true, "file"},
-		{"test3", "-i", false, ""},
-		{"test4", "-i=.", false, ""},
-		{"test5", "-i=..", false, ""},
-		{"test6", "-i=...", true, "..."},
-		{"test7", "-i=/", false, ""},
+		{"test1", "-i=file.txt", true, "file.txt", nil},
+		{"test2", "-i=file", true, "file", nil},
+		{"test3", "-i", false, "", errors.New("path might be empty")},
+		{"test4", "-i=.", false, "", errors.New("path is a directory")},
+		{"test5", "-i=..", false, "", errors.New("path is a directory")},
+		{"test6", "-i=...", true, "...", nil},
+		{"test7", "-i=/", false, "", errors.New("path is a directory")},
+		{"test8", "-i=/////", false, "", errors.New("path is a directory")},
+		{"test9", "-i=//", false, "", errors.New("path is a directory")},
+		{"test10", `-i=\`, true, `\`, nil},
 	}
 
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				got1, got2 := InputFile(tt.input)
+				got1, got2, gotError := InputFile(tt.input)
+
+				if gotError != nil {
+					if gotError.Error() != tt.wantErr.Error() {
+						t.Errorf("InputFile() => %v | %v ", gotError, tt.wantErr)
+					}
+				}
+
 				if got1 != tt.want1 || got2 != tt.want2 {
 					t.Errorf("InputFile() = [%v %v] , want [%v %v]", got1, got2, tt.want1, tt.want2)
 				}
