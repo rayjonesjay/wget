@@ -154,7 +154,7 @@ func TestEvalArgs(t *testing.T) {
 
 		{
 			"Beta", args{arguments: mappy["Beta"]},
-			ctx.Context{OutputFile: "file.txt", InputFile: "urls.txt", SavePath: "/home/Downloads"},
+			ctx.Context{OutputFile: "file.txt", InputFile: "urls.txt", SavePath: "./"}, // if SavePath cannot be accessed(permissions) default to current directory
 		},
 
 		{
