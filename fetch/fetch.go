@@ -346,6 +346,9 @@ func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
 	}
 
 	l.OnGetFile = func(filename string) {
+		if !strings.HasPrefix(filename, "/") {
+			filename = "./" + filename
+		}
 		s.SavePath = fmt.Sprintf("saving file to: %s", filename)
 		s.OnUpdate(s, 3)
 	}
