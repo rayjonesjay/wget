@@ -1,7 +1,9 @@
 package syscheck
 
 import (
+	"fmt"
 	"testing"
+	"time"
 )
 
 func TestCheckOperatingSystem(t *testing.T) {
@@ -23,5 +25,22 @@ func TestCheckOperatingSystem(t *testing.T) {
 				t.Errorf("CheckOperatingSystem(%q) error = %v, wantErr %v", tt.operatingSystem, err, tt.wantErr)
 			}
 		})
+	}
+}
+func TestGetCurrentTime(t *testing.T) {
+
+	tests := []struct {
+		input bool
+		want  string
+	}{
+		{true, fmt.Sprintf("start at %s", time.Now().Format("2006-01-02 15:04:05"))},
+		{false, fmt.Sprintf("finished at %s", time.Now().Format("2006-01-02 15:04:05"))},
+	}
+
+	for _, tt := range tests {
+		got := GetCurrentTime(tt.input)
+		if got != tt.want {
+			t.Errorf("GetCurrentTime() Failed got %s want %s", got, tt.want)
+		}
 	}
 }
