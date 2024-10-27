@@ -20,69 +20,69 @@ WGET is a utility that recreates some of the core functionalities of the origina
 ```plaintext
 .
 ├── args
-│   ├── eval_args.go
-│   └── eval_args_test.go
+│   ├── eval_args.go
+│   └── eval_args_test.go
 ├── convertlinks
-│   ├── convertlinks.go
-│   └── convertlinks_test.go
+│   ├── convertlinks.go
+│   └── convertlinks_test.go
 ├── css
-│   ├── css.go
-│   └── css_test.go
+│   ├── css.go
+│   └── css_test.go
 ├── ctx
-│   ├── ctx.go
-│   └── ctx_test.go
+│   ├── ctx.go
+│   └── ctx_test.go
 ├── downloader
-│   ├── downloader.go
-│   └── downloader_test.go
+│   ├── downloader.go
+│   └── downloader_test.go
 ├── fetch
-│   ├── fetch.go
-│   └── fetch_test.go
+│   ├── fetch.go
+│   └── fetch_test.go
 ├── fileio
-│   ├── fileio.go
-│   └── fileio_test.go
+│   ├── fileio.go
+│   └── fileio_test.go
 ├── globals
-│   ├── globals.go
-│   └── globals_test.go
+│   ├── globals.go
+│   └── globals_test.go
 ├── go.mod
 ├── go.sum
 ├── help
-│   └── help.go
+│   ├── help.go
+│   └── help_test.go
 ├── httpx
-│   ├── extras.go
-│   └── extras_test.go
+│   ├── extras.go
+│   └── extras_test.go
 ├── info
-│   ├── info.go
-│   └── info_test.go
+│   ├── info.go
+│   └── info_test.go
 ├── LICENSE
 ├── limitedio
-│   ├── limitedio.go
-│   └── limitedio_test.go
+│   ├── limitedio.go
+│   └── limitedio_test.go
 ├── main.go
 ├── mirror
-│   ├── dirlimits.go
-│   ├── links
-│   │   ├── css.go
-│   │   ├── css_test.go
-│   │   ├── html.go
-│   │   └── html_test.go
-│   ├── mirror.go
-│   ├── path.go
-│   ├── path_test.go
-│   ├── README.md
-│   └── xurl
-│       ├── url.go
-│       └── url_test.go
+│   ├── dirlimits.go
+│   ├── links
+│   │   ├── css.go
+│   │   ├── css_test.go
+│   │   ├── html.go
+│   │   └── html_test.go
+│   ├── mirror.go
+│   ├── path.go
+│   ├── path_test.go
+│   ├── README.md
+│   └── xurl
+│       ├── url.go
+│       └── url_test.go
 ├── README.md
 ├── syscheck
-│   ├── system.go
-│   └── system_test.go
+│   ├── system.go
+│   └── system_test.go
 ├── temp
-│   ├── temp.go
-│   └── temp_test.go
-├── TESTS.md
+│   ├── temp.go
+│   └── temp_test.go
 ├── xerr
-│   ├── xerr.go
-│   └── xerr_test.go
+│   ├── xerr.go
+│   └── xerr_test.go
 └── xurl
     ├── xurl.go
     └── xurl_test.go
