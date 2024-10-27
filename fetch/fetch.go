@@ -346,6 +346,7 @@ func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
 	}
 
 	l.OnGetFile = func(filename string) {
+		// if given file.txt transform to ./file.txt
 		if !strings.HasPrefix(filename, "/") {
 			filename = "./" + filename
 		}
