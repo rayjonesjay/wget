@@ -79,7 +79,7 @@ func TestIsValidURL(t *testing.T) {
 			name: "Relative URL",
 			args: args{url: "/path/to/resource"},
 			want: false,
-		  },
+		},
 		{
 			name: "Invalid URL with invalid scheme",
 			args: args{url: "ftp://example.com"},
