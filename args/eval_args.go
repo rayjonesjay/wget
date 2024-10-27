@@ -146,18 +146,20 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 // if dirPath does not exist it is created
 func CreateDirFromPath(dirPath string) string {
 
+	// fmt.Println(">>>", dirPath)
+	user := os.ExpandEnv("$USER")
 	// check for tilde '~` symbol and replace with
 	if strings.HasPrefix(dirPath, "~") {
-		dirPath = strings.Replace(dirPath, "~", "/home", 1)
+		dirPath = strings.Replace(dirPath, "~", "/home/"+user, 1)
 	}
 	// clean the path by:
 	//removing more than one consecutive backslashes
 	//replacing '.' with nothing
 	//replacing '..' and replace all non-.. preceding it with nothing
 	dirPath = path.Clean(dirPath)
-
+	// fmt.Println(">>>", dirPath)
 	absolutePath, _ := filepath.Abs(dirPath)
-
+	// fmt.Println(absolutePath)
 	err := os.MkdirAll(absolutePath, 0755)
 	if err != nil {
 		return "./"
