@@ -8,6 +8,21 @@ import (
 	"unsafe"
 )
 
+var (
+	// HideCursor hides the terminal cursor to avoid it from blinking
+	HideCursor = from("\033[?25l")
+	// ShowCursor makes the cursor visible again
+	ShowCursor = from("\033[?25h")
+	// ClearScreen clears the terminal screen.
+	ClearScreen = from("\033[2J")
+	// MoveCursor moves the terminal cursor to the specified row, we don't need columns here
+	MoveCursor func(row int)
+)
+
+func init() {
+	MoveCursor = fromArg("\033[%d;0H")
+}
+
 // CheckOperatingSystem checks if the underlying operating system is neither Linux nor macOS
 // allows passing an OS name (used for testing)
 func CheckOperatingSystem(operatingSystem string) error {
@@ -46,23 +61,14 @@ func GetTerminalWidth() int {
 	return width
 }
 
-// MoveCursor moves the terminal cursor to the specified row, we don't need columns here
-func MoveCursor(row int) {
-	// 0H is the column part, all printing is done from left
-	fmt.Printf("\033[%d;0H", row)
+func from(format string) func() {
+	return func() {
+		fmt.Printf(format)
+	}
 }
 
-// HideCursor hides the terminal cursor to avoid it from blinking
-func HideCursor() {
-	fmt.Print("\033[?25l")
-}
-
-// ShowCursor makes the cursor visible again
-func ShowCursor() {
-	fmt.Print("\033[?25h")
-}
-
-// ClearScreen clears the terminal screen.
-func ClearScreen() {
-	fmt.Print("\033[2J")
+func fromArg(format string) func(int) {
+	return func(arg int) {
+		fmt.Printf(format, arg)
+	}
 }
