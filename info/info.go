@@ -11,7 +11,7 @@ var (
 	// Org the name of the organization owning the program
 	Org     = "org.zone01.wget"
 	Name    = "wget"
-	Version = "1.1.0"
+	Version = "1.2.0"
 	Go      = "1.22.4"
 )
 
