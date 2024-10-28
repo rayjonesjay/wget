@@ -89,6 +89,18 @@ func DoAliasUserDir(path, homePath string) string {
 
 // AliasUserDir same as [DoAliasUserDir], but gets the user's HOME directory from
 // the environment variables as returned by [os.UserHomeDir]
+//
+// # Example
+//
+// Code:
+//
+//	// assuming the target user is `ubuntu` and his HOME path is set to `/home/ubuntu`
+//	result := AliasUserDir("/home/ubuntu/Downloads")
+//	fmt.Println(result)
+//
+// Output:
+//
+//	~/Downloads
 func AliasUserDir(path string) string {
 	homePath, err := os.UserHomeDir()
 	if err != nil {
