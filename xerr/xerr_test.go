@@ -15,9 +15,15 @@ func TestWriteErrorMessageToStderr(t *testing.T) {
 	errorMessage := "Test error message"
 	WriteError(errorMessage, 0, false)
 
-	w.Close()
+	err := w.Close()
+	if err != nil {
+		t.Error(err)
+	}
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	_, err = buf.ReadFrom(r)
+	if err != nil {
+		t.Error(err)
+	}
 	os.Stderr = originalStderr
 
 	if buf.String() != errorMessage+"\n" {
@@ -35,9 +41,15 @@ func TestHandleNonStringErrorMessage(t *testing.T) {
 	errorMessage := 12345
 	WriteError(errorMessage, 0, false)
 
-	w.Close()
+	err := w.Close()
+	if err != nil {
+		t.Error(err)
+	}
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	_, err = buf.ReadFrom(r)
+	if err != nil {
+		t.Error(err)
+	}
 	os.Stderr = originalStderr
 
 	expectedOutput := "12345\n"
