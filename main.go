@@ -42,5 +42,36 @@ func main() {
 
 	// check command-line args and download the defined files
 	ctx := args.DownloadContext(arguments)
+	log.Printf("Args context: %#v\n", ctx)
+	// Check for invalid commandline args combinations
+	{
+		die := func(msg string) {
+			xerr.WriteError(
+				msg,
+				1,
+				true)
+		}
+
+		if ctx.ConvertLinks && !ctx.Mirror {
+			die("bad format: option --convert-links is on but --mirror is off")
+			return
+		}
+
+		if (len(ctx.Exclude) != 0 || len(ctx.Rejects) != 0) && !ctx.Mirror {
+			die("bad format: options [--exclude short hand -X; --reject short hand -R] " +
+				"are only valid in --mirror mode")
+			return
+		}
+
+		if ctx.Mirror && ctx.OutputFile != "" {
+			die("bad format: option --mirror with -O specified is ambiguous")
+			return
+		}
+
+		if len(ctx.Links) > 1 && ctx.OutputFile != "" {
+			die("bad format: many URLs to download but -O is specified, this is ambiguous")
+			return
+		}
+	}
 	downloader.Get(ctx)
 }
