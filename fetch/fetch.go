@@ -347,10 +347,8 @@ func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
 	}
 
 	l.OnGetFile = func(filename string) {
-		// if given file.txt transform to ./file.txt
-		if !strings.HasPrefix(filename, "/") {
-			filename = "./" + filename
-		}
+		filename = fileio.AliasUserDir(filename)
+		filename = fileio.PrependDotIfInCurrentDir(filename)
 		s.SavePath = fmt.Sprintf("saving file to: %s", filename)
 		s.OnUpdate(s, 3)
 	}
@@ -392,6 +390,11 @@ func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
 			l.OnContentLength(s.Downloaded)
 			s.OnUpdate(s, 2)
 		}
+		if s.avgRate == 0 {
+			// This file was downloaded in less than a second, the average speed is relative
+			// to the size of the file
+			s.avgRate = int32(s.Downloaded)
+		}
 		s.Progress = onProgress(s.Downloaded, s.Total, s.avgRate, duration.String())
 		s.OnUpdate(s, 4)
 	}
@@ -429,9 +432,12 @@ func onProgress(downloaded, total int64, rate int32, eta string) string {
 	}
 
 	if eta == "" {
-		eta = "eta " + CalculateETA(downloaded, total, rate)
+		// get the estimated time to finish the download
+		eta = CalculateETA(downloaded, total, rate)
 	} else {
-		eta = "in " + eta
+		// ignore the download duration, instead default to eta as in the question
+		// in this case, the download is finished, so the eta is simply zero seconds
+		eta = "0s"
 	}
 
 	return fmt.Sprintf(
