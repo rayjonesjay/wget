@@ -1,9 +1,9 @@
 package syscheck
 
 import (
-	"fmt"
+	"os"
 	"testing"
-	"time"
+	"wget/temp"
 )
 
 func TestCheckOperatingSystem(t *testing.T) {
@@ -27,20 +27,35 @@ func TestCheckOperatingSystem(t *testing.T) {
 		})
 	}
 }
-func TestGetCurrentTime(t *testing.T) {
 
-	tests := []struct {
-		input bool
-		want  string
-	}{
-		{true, fmt.Sprintf("start at %s", time.Now().Format("2006-01-02 15:04:05"))},
-		{false, fmt.Sprintf("finished at %s", time.Now().Format("2006-01-02 15:04:05"))},
+func TestGetTerminalWidth(t *testing.T) {
+	originalStdout := os.Stdout
+	defer func() {
+		os.Stdout = originalStdout
+	}()
+
+	var err error
+	os.Stdout, err = temp.File()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	for _, tt := range tests {
-		got := GetCurrentTime(tt.input)
-		if got != tt.want {
-			t.Errorf("GetCurrentTime() Failed got %s want %s", got, tt.want)
-		}
+	width := GetTerminalWidth()
+	if width != 300 {
+		t.Errorf("GetTerminalWidth = %d, want %d", width, 300)
 	}
+}
+
+func Test_from(t *testing.T) {
+	function := from("Hello")
+	function()
+	// Output:
+	// Hello
+}
+
+func Test_fromArg(t *testing.T) {
+	function := fromArg("row %d")
+	function(10)
+	// Output:
+	// row 10
 }

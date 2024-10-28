@@ -5,9 +5,23 @@ import (
 	"fmt"
 	"os"
 	"syscall"
-	"time"
 	"unsafe"
 )
+
+var (
+	// HideCursor hides the terminal cursor to avoid it from blinking
+	HideCursor = from("\033[?25l")
+	// ShowCursor makes the cursor visible again
+	ShowCursor = from("\033[?25h")
+	// ClearScreen clears the terminal screen.
+	ClearScreen = from("\033[2J")
+	// MoveCursor moves the terminal cursor to the specified row, we don't need columns here
+	MoveCursor func(row int)
+)
+
+func init() {
+	MoveCursor = fromArg("\033[%d;0H")
+}
 
 // CheckOperatingSystem checks if the underlying operating system is neither Linux nor macOS
 // allows passing an OS name (used for testing)
@@ -47,38 +61,14 @@ func GetTerminalWidth() int {
 	return width
 }
 
-// MoveCursor moves the terminal cursor to the specified row, we don't need columns here
-func MoveCursor(row int) {
-	// 0H is the column part, all printing is done from left
-	fmt.Printf("\033[%d;0H", row)
-}
-
-// HideCursor hides the terminal cursor to avoid it from blinking
-func HideCursor() {
-	fmt.Print("\033[?25l")
-}
-
-// ShowCursor makes the cursor visible again
-func ShowCursor() {
-	fmt.Print("\033[?25h")
-}
-
-// ClearScreen clears the terminal screen.
-func ClearScreen() {
-	fmt.Print("\033[2J")
-}
-
-// GetCurrentTime prints a textual representation of the current time, it takes isStart
-// if isStart is true it indicates the download process has started, if false means end of the current download
-func GetCurrentTime(isStart bool) string {
-	// Get the current time
-	currentTime := time.Now()
-
-	// Format time to print up to seconds
-	formattedTime := currentTime.Format("2006-01-02 15:04:05")
-
-	if isStart {
-		return fmt.Sprintf("start at %s", formattedTime)
+func from(format string) func() {
+	return func() {
+		fmt.Printf(format)
 	}
-	return fmt.Sprintf("finished at %s", formattedTime)
+}
+
+func fromArg(format string) func(int) {
+	return func(arg int) {
+		fmt.Printf(format, arg)
+	}
 }

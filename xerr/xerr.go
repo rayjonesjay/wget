@@ -30,11 +30,12 @@ var (
 // WriteError takes errorMessage of any type and statusCode
 // then writes errorMessage to stderr and exits with the given statusCode if shouldExit is set to true
 func WriteError(errorMessage interface{}, statusCode int, shouldExit bool) {
-	_, err := os.Stderr.WriteString(fmt.Sprintf("%v\n", errorMessage))
-	if err != nil {
-		return
-	}
+	writeError(errorMessage, statusCode, shouldExit, os.Exit)
+}
+
+func writeError(errorMessage interface{}, statusCode int, shouldExit bool, exit func(int)) {
+	_, _ = os.Stderr.WriteString(fmt.Sprintf("%v\n", errorMessage))
 	if shouldExit {
-		os.Exit(statusCode)
+		exit(statusCode)
 	}
 }
