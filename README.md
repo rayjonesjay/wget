@@ -92,47 +92,49 @@ WGET is a utility that recreates some of the core functionalities of the origina
 
 ## Features
 
+To use the program first build it using, ```go build -o wget```
+
 1. **Download a file via URL**  
    Command-line argument accepts a URL to download a file from the web.
    ```bash
-   $ go run . URL
+   $ ./wget URL
    ```
 
 2. **Download and save under a different name**  
    You can specify a custom file name using the `-O` flag.
    ```bash
-   $ go run . -O=file_name URL
+   $ ./wget -O=file_name URL
    ```
 
 3. **Download and save to a different directory**  
    Use `-P` flag to specify a directory for saving the file.
    ```bash
-   $ go run . -P=path/to/save URL
+   $ ./wget -P=path/to/save URL
    ```
 
 4. **Limit download speed**  
    Control the download speed using the `--rate-limit` flag. The suffix `k` and `M` are used for kilobytes and megabytes, respectively.
    ```bash
-   $ go run . --rate-limit=100k URL
-   $ go run . --rate-limit=200M URL
+   $ ./wget --rate-limit=100k URL
+   $ ./wget --rate-limit=200M URL
    ```
 
 5. **Download in background**  
    The `--background` flag allows the download to proceed in the background.
    ```bash
-   $ go run . --background URL
+   $ ./wget --background URL
    ```
 
 6. **Download multiple files asynchronously**  
    The `-i` flag reads a file containing multiple URLs and downloads them concurrently.
    ```bash
-   $ go run . -i=path/to/file/with/links
+   $ ./wget -i=path/to/file/with/links
    ```
 
 7. **Mirror an entire website**  
    The `--mirror` flag downloads an entire website for offline use.
    ```bash
-   $ go run . --mirror URL
+   $ ./wget --mirror URL
    ```
 
 ## Flags
@@ -190,42 +192,42 @@ Now that the project is set up, you can start using the WGET utility:
 
 #### See the help page
 ```bash
-$ go run . -h
+$ ./wget -h
 ```
 
 #### See the current version
 ```bash
-$ go run . -v
+$ ./wget -v
 ```
 
 #### Download using url
 ```bash
-$ go run . https://example.com/file.zip
+$ ./wget https://example.com/file.zip
 ```
 
-#### Download and Save with a Specific Name
+#### Download and Save with a Specifhttps://learn.zone01kisumu.ke/git/ramuiruri/wgetic Name
 ```bash
-$ go run . -O=newfile.zip https://example.com/file.zip
+$ ./wget -O=newfile.zip https://example.com/file.zip
 ```
 
 #### Download to a Specific Directory
 ```bash
-$ go run . -P=~/Downloads/ https://example.com/file.zip
+$ ./wget -P=~/Downloads/ https://example.com/file.zip
 ```
 
 #### Limit Download Speed
 ```bash
-$ go run . --rate-limit=500k https://example.com/largefile.zip
+$ ./wget --rate-limit=500k https://example.com/largefile.zip
 ```
 
 #### Download Multiple Files Asynchronously
 ```bash
-$ go run . -i=links.txt
+$ ./wget -i=links.txt
 ```
 
 #### Mirror a Website
 ```bash
-$ go run . --mirror https://example.com
+$ ./wget --mirror https://example.com
 ```
 
 ## Contribution
