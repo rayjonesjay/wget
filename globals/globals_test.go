@@ -2,10 +2,11 @@ package globals
 
 import (
 	"fmt"
-	"golang.org/x/net/html"
 	"reflect"
 	"strings"
 	"testing"
+
+	"golang.org/x/net/html"
 )
 
 func TestMergeMaps(t *testing.T) {
@@ -194,4 +195,20 @@ func ExampleRenderToString_withAttributes() {
 	rendered := RenderToString(node)
 	fmt.Println(rendered)
 	// Output: <a href="https://example.com">Link</a>
+}
+
+func TestRoundBytes(t *testing.T) {
+	tests := []struct {
+		input int64
+		want  string
+	}{
+		{56370, "0.06MB"},
+	}
+
+	for _, tt := range tests {
+		got := RoundBytes(tt.input)
+		if got != tt.want {
+			t.Errorf("RoundBytes() Failed got %s want %s", got, tt.want)
+		}
+	}
 }
