@@ -4,23 +4,13 @@ package temp
 import (
 	"os"
 	"path"
-	"sync"
 	"wget/info"
 )
-
-var tempDir = ""
-var cm = sync.Mutex{}
 
 // Dir returns the default directory to use for temporary files for the program.
 // This is a wrapper around [os.TempDir], so as not to end up polluting the user's temp dir.
 func Dir() string {
-	if tempDir != "" {
-		return tempDir
-	}
-
-	cm.Lock()
-	defer cm.Unlock()
-	tempDir = path.Join(os.TempDir(), info.Org)
+	tempDir := path.Join(os.TempDir(), info.Org)
 	_ = os.MkdirAll(tempDir, 0775)
 	return tempDir
 }

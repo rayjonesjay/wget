@@ -2,12 +2,12 @@ package temp
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sync"
 	"testing"
+	"wget/info"
 )
 
 // Test creating files in the temp directory
@@ -36,22 +36,32 @@ func TestFileCreation(t *testing.T) {
 // Test Dir() when tempDir is manually set
 func TestDirWithCustomTempDir(t *testing.T) {
 	// Set a custom temp dir
-	tempDir = filepath.Join(os.TempDir(), "custom-temp-dir")
-	defer func() {
-		tempDir = ""
-	}()
+	err := os.Setenv("TMPDIR", "custom-temp-dir")
+	err = os.Setenv("TMP", "custom-temp-dir")
+	defer unsetEnvs("TMPDIR", "TMP")
+
+	if err != nil {
+		t.Fatalf("unexpected error setting TMP directory: %v", err)
+	}
 
 	// Call Dir() to get the temp directory
 	dir := Dir()
-
+	expected := filepath.Join("custom-temp-dir", info.Org)
 	// Check if the directory matches the custom path
-	if dir != tempDir {
-		t.Errorf("expected %s, got %s", tempDir, dir)
+	if filepath.Join(dir) != expected {
+		t.Errorf("expected %s, got %s", expected, dir)
+	}
+}
+
+func unsetEnvs(args ...string) {
+	for _, arg := range args {
+		_ = os.Unsetenv(arg)
 	}
 }
 
 // Test concurrent access to Dir()
 func TestDirConcurrency(t *testing.T) {
+	defer unsetEnvs("TMPDIR", "TMP")
 	const numRoutines = 100
 	var wg sync.WaitGroup
 
@@ -62,7 +72,12 @@ func TestDirConcurrency(t *testing.T) {
 			defer wg.Done()
 			// reset the `tempDir` after 10 iterations
 			if (i+1)%10 == 0 {
-				tempDir = ""
+				err := os.Setenv("TMPDIR", "")
+				err = os.Setenv("TMP", "")
+				if err != nil {
+					t.Errorf("unexpected error setting TMP directory: %v", err)
+					return
+				}
 			}
 			dir := Dir()
 			if dir == "" {
@@ -114,11 +129,14 @@ func TestFileConcurrency(t *testing.T) {
 
 // Test error handling when directory creation fails
 func TestDirFailure(t *testing.T) {
-	// Set tempDir to an invalid path to force an error
-	tempDir = "/invalid-path/"
-	defer func() {
-		tempDir = ""
-	}()
+	// Set TMP Dir to an invalid path to force an error
+	err := os.Setenv("TMPDIR", "/invalid-path/")
+	err = os.Setenv("TMP", "/invalid-path/")
+	defer unsetEnvs("TMPDIR", "TMP")
+	if err != nil {
+		t.Errorf("unexpected error setting TMP directory: %v", err)
+		return
+	}
 
 	defer func() {
 		if r := recover(); r == nil {
@@ -127,7 +145,7 @@ func TestDirFailure(t *testing.T) {
 	}()
 
 	// Call File() to trigger the error
-	_, err := File()
+	_, err = File()
 	if err != nil {
 		panic(err)
 	}
@@ -156,67 +174,4 @@ func ExampleFile() {
 	fmt.Println(n)
 	// Output:
 	// 11
-}
-
-func TestReturnsExistingTempDir(t *testing.T) {
-	expectedDir := "/tmp/org.zone01.wget"
-	result := Dir()
-	if result != expectedDir {
-		t.Errorf("Expected %s, but got %s", expectedDir, result)
-	}
-}
-
-func TestHandlesMkdirAllError(t *testing.T) {
-	originalTempDir := os.TempDir()
-	defer func(key, value string) {
-		err := os.Setenv(key, value)
-		if err != nil {
-			log.Fatalf("failed to set environment variable: %v\n", err)
-		}
-	}("TMPDIR", originalTempDir)
-
-	// get the tmp dir before changing the TMPDIR environment variable
-	dir := Dir()
-
-	err := os.Setenv("TMPDIR", "/invalid/path")
-	if err != nil {
-		log.Fatalf("failed to set environment variable: %v\n", err)
-	}
-
-	// When the TMPDIR environment variable is changed, but the Dir() function was
-	// already called, then, Dir will stick to the first TMPDIR it succeeded in
-	// creating
-	if Dir() != dir {
-		t.Errorf("expected %s, but got %s", originalTempDir, Dir())
-	}
-}
-
-func TestFileSuccess(t *testing.T) {
-	// Mocked Dir function for testing
-	Dir := func() string {
-		return os.TempDir() // Default to system temp dir
-	}
-	// temporary directory
-	tempDir := t.TempDir()
-
-	originalDir := Dir
-	Dir = func() string { return tempDir }
-	defer func() { Dir = originalDir }()
-
-	file, err := File()
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if file == nil {
-		t.Fatal("expected a file, got nil")
-	}
-
-	err = file.Close()
-	if err != nil {
-		log.Fatalf("failed to close temp file [%q]: %v\n", file.Name(), err)
-	}
-
-	if _, err := os.Stat(file.Name()); os.IsNotExist(err) {
-		t.Fatalf("expected file %s to exist, but it does not", file.Name())
-	}
 }
