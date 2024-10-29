@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+
 	"wget/fileio"
 	"wget/globals"
 	"wget/httpx"
@@ -123,7 +124,7 @@ type Config struct {
 	// Method holds the HTTP request method to use for the request, will default to GET if undefined
 	Method string
 	// AllowedStatusCodes keeps a list of all the status codes that are allowed for the given request.
-	//Any other status code will be considered an error
+	// Any other status code will be considered an error
 	AllowedStatusCodes []int
 	AdvancedProgressListener
 }
@@ -223,7 +224,7 @@ func URL(url string, config Config) (info FileInfo, err error) {
 	downloadedBytes := int64(0)
 
 	// ReadAll bytes from the speed governed response body in chunks of 8KiBs.
-	//See io.ReadAll for more details
+	// See io.ReadAll for more details
 	for {
 		var n int
 		// Read a chunk of bytes from the response body
@@ -238,7 +239,7 @@ func URL(url string, config Config) (info FileInfo, err error) {
 				return
 			}
 			// read some n bytes, before reaching the end of the file,
-			//shouldn't be reported as an error; will then proceed to save them to file
+			// shouldn't be reported as an error; will then proceed to save them to file
 			err = nil
 		}
 		downloadedBytes += int64(n)
@@ -340,7 +341,7 @@ func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
 		if length < 0 {
 			s.ContentLength = fmt.Sprintf("\rcontent size: unspecified [~%s]\n", globals.FormatSize(length))
 		} else {
-			s.ContentLength = fmt.Sprintf("\rcontent size: %d [~%s]\n", length, globals.FormatSize(length))
+			s.ContentLength = fmt.Sprintf("\rcontent size: %d [~%s]\n", length, globals.RoundBytes(length))
 		}
 		s.OnUpdate(s, 2)
 	}

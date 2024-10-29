@@ -5,10 +5,13 @@ package globals
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/net/html"
 	"io"
 	"sync"
+
+	"wget/httpx"
 	"wget/syscheck"
+
+	"golang.org/x/net/html"
 )
 
 var (
@@ -19,10 +22,10 @@ var (
 	// HrefElements defines html elements that typically define their linked resource in the "href" attribute
 	HrefElements = map[string]bool{"a": true, "link": true}
 	// SrcDataElements defines html elements that typically define their linked resource in either the "src" or "data"
-	//attribute
+	// attribute
 	SrcDataElements = MergeMaps(SrcElements, DataElements)
 	// AllResourceElements defines html elements that typically define their linked resource in
-	//either the "src", "href", or "data" attribute
+	// either the "src", "href", or "data" attribute
 	AllResourceElements = MergeMaps(SrcDataElements, HrefElements)
 )
 
@@ -79,6 +82,15 @@ func FormatSize(size int64) string {
 			return "--.- B"
 		}
 		return fmt.Sprintf("%d B", size)
+	}
+}
+
+// RoundBytes rounds the given bytes to the nearest MB or GB.
+func RoundBytes(bytes int64) string {
+	if bytes < httpx.GB {
+		return fmt.Sprintf("%.2f%s", float64(bytes)/float64(httpx.MB), "MB")
+	} else {
+		return fmt.Sprintf("%.2f%s", float64(bytes)/float64(httpx.GB), "GB")
 	}
 }
 

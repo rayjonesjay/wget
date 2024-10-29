@@ -46,7 +46,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			if err != nil {
 				xerr.WriteError(fmt.Errorf("failed to create %q defaulting to stdout", logFile), 2, false)
 			}
-			fmt.Printf("Output will be written to %s.\n", logFile)
+			fmt.Printf("Output will be written to \"%s\".\n", logFile)
 			// defer fd.Close() // this needs to be tested
 			os.Stdout = fd // Instead of sending output to standard output (stdout) send to wget-log
 
