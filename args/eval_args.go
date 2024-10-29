@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -168,10 +169,11 @@ func CreateDirFromPath(dirPath string) string {
 	return absolutePath
 }
 
-// ToBytes converts a rateLimit in string format to bytes, if no suffix is supplied then the value is considered in bytes
+// ToBytes converts a rateLimit in (decimal or float) to bytes, if no suffix is supplied then the value is assumed to be bytes
 // the only suffixes allowed are (k == kilobytes) and (M == megabytes)
 // example when user passes: 20k ToBytes returns 20000
 // example when user passes: 20M ToBytes returns 20000000
+// example when user passes: 12.2 ToBytes returns 12
 func ToBytes(rateLimit string) (rateLimitBytes int64) {
 	// 1k == 1000 bytes
 	// 1M == 1_000_000 bytes
@@ -188,7 +190,10 @@ func ToBytes(rateLimit string) (rateLimitBytes int64) {
 	indx := index([]rune(rateLimit))
 	size, suffix := rateLimit[:indx+1], rateLimit[indx+1:]
 
-	sizeN, err := strconv.Atoi(size)
+	sizeFloat, err := strconv.ParseFloat(size, 64)
+
+	// Round of to nearest int less than sizeFloat
+	sizeN := math.Floor(sizeFloat)
 	if err != nil {
 		log.Printf("Failed to convert size rate limit %s defaulting to 0\n", rateLimit)
 		return 0
