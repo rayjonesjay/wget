@@ -9,11 +9,13 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"unicode"
 	"wget/ctx"
 	"wget/downloader"
@@ -30,7 +32,28 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 
 	length := len(arguments)
 
-	for _, arg := range arguments {
+	// This closure function aids in preventing recursive launching of processes,
+	// we only need one background option,
+	// if you pass more than one, the function will consider the first background option
+	withoutDuplicateBackground := func(args []string) []string {
+		seen := make(map[string]bool)
+		unique := []string{}
+
+		for _, arg := range args {
+			if arg == "-B" || arg == "--background" {
+				if seen["background"] {
+					continue // Skip duplicate -B or --background
+				}
+				seen["background"] = true
+			}
+			unique = append(unique, arg)
+		}
+		return unique
+	}
+	arguments = withoutDuplicateBackground(arguments)
+	var backgroundLocation int
+
+	for i, arg := range arguments {
 
 		switch {
 		case arg == "--help" || arg == "-h":
@@ -41,14 +64,7 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 			if len(arguments) == 1 {
 				xerr.WriteError(help.UsageMessage, 1, true)
 			}
-			logFile := downloader.CheckIfFileExists("wget-log")
-			fd, err := os.Create(logFile)
-			if err != nil {
-				xerr.WriteError(fmt.Errorf("failed to create %q defaulting to stdout", logFile), 2, false)
-			}
-			fmt.Printf("Output will be written to \"%s\".\n", logFile)
-			// defer fd.Close() // this needs to be tested
-			os.Stdout = fd // Instead of sending output to standard output (stdout) send to wget-log
+			backgroundLocation = i
 
 		case strings.HasPrefix(arg, "-P="):
 			isParsed, path := IsPathFlag(arg)
@@ -138,6 +154,52 @@ func DownloadContext(arguments []string) (Arguments ctx.Context) {
 				Arguments.Links = append(Arguments.Links, url)
 			}
 		}
+	}
+
+	launchInBackground := func(args []string, index int, fd *os.File) {
+		// remove the background flag to prevent recursion
+		copy(args[index:], args[index+1:])
+		args = args[:len(args)-1] // remove the last element since its will be a duplicate (same as len(args)-2)
+
+		// detach the current process from its parent
+		// run in the background
+		executable, err := os.Executable()
+		if err != nil {
+			xerr.WriteError(fmt.Errorf("failed to get executable path:%v Defaulting to normal", err), 1, false)
+		}
+
+		// if stdin or stdout or stderr is nill, the process will read from os.DevNull
+		cmd := exec.Command(executable, args...)
+
+		// send the output of the file to specified file descriptor
+		cmd.Stdout = fd
+		os.Stdout = fd
+		cmd.Stderr = fd
+		cmd.Stdin = nil
+
+		// set the command/program to run in a new session (child process)
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setsid: true, // create a new session
+		}
+
+		// start the command and dont wait for it to finish
+		// this allows us to get the terminal prompt back
+		if err = cmd.Start(); err != nil {
+			xerr.WriteError(fmt.Errorf("failed to start background process: %v Defaulting to normal", err), 1, false)
+		}
+
+		// This is critical, dont remove it
+		os.Exit(0)
+	}
+	if Arguments.BackgroundMode {
+
+		logFile := downloader.CheckIfFileExists("wget-log")
+		fd, err := os.Create(logFile)
+		if err != nil {
+			xerr.WriteError(fmt.Errorf("failed to create %q defaulting to stdout", logFile), 2, false)
+		}
+		fmt.Printf("Output will be written to \"%s\".\n", logFile)
+		launchInBackground(arguments, backgroundLocation, fd)
 	}
 
 	return
