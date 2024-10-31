@@ -56,7 +56,7 @@ func (a *arg) Download() error {
 	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
 
 	// how many rows each download progress indicator for a given link is allocated
-	rows := 8
+	rows := 9
 	for i, url := range a.Links {
 		lineNumber := i
 		wg.Add(1)
