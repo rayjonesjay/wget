@@ -382,7 +382,7 @@ func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
 			return
 		}
 
-		s.Finished = fmt.Sprintf("Downloaded [%s]\u001B[0;32m\nfinished at %s\u001B[0m", url, format(t))
+		s.Finished = fmt.Sprintf("\nDownloaded [%s]\u001B[0;32m\nfinished at %s\u001B[0m", url, format(t))
 		s.OnUpdate(s, 5)
 		duration := t.Sub(s.StartTime).Truncate(time.Second)
 		if s.Total == -1 {
