@@ -56,7 +56,7 @@ func GetTerminalWidth() int {
 	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
 	width := int(ws.Col)
 	if width <= 0 {
-		return 300
+		return 120
 	}
 	return width
 }
