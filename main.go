@@ -6,8 +6,12 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"sync"
+	"time"
 	"wget/fileio"
+	"wget/globals"
 	"wget/temp"
+	"wget/terminal"
 
 	"wget/args"
 	"wget/downloader"
@@ -73,5 +77,56 @@ func main() {
 			return
 		}
 	}
-	downloader.Get(ctx)
+
+	log.Println("[MAIN] Initializing Terminal...")
+	term, err := terminal.Init()
+	if err != nil {
+		fmt.Printf("Failed to initialize terminal screen: %v\n", err)
+		return
+	}
+	log.Println("[MAIN] OK")
+
+	defer func(term *terminal.Terminal) {
+		log.Println("[MAIN] Cleaning up...")
+		err := term.EndWin()
+		if err != nil {
+			fmt.Printf("Failed to restore terminal screen: %v\n", err)
+			return
+		}
+		log.Println("[MAIN] OK")
+	}(term)
+
+	wg := sync.WaitGroup{}
+
+	log.Println("[MAIN] Creating Progress Terminal...")
+	exit := make(chan struct{}, 1)
+	p := terminal.New(term, exit)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// If this goroutine finishes,
+		//the downloader is may still be running, go down with it too
+		defer wg.Done()
+		log.Println("[OK] Executing `Progress.Run` in new Goroutine")
+		p.Run()
+		log.Println("[OK] `Progress.Run` exiting new Goroutine")
+	}()
+	log.Println("[MAIN] OK")
+
+	log.Println("[MAIN] Starting downloader...")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		globals.ProgressTerm = p
+		downloader.Get(ctx)
+		defer wg.Done()
+		if !ctx.BackgroundMode {
+			time.Sleep(1 * time.Minute)
+		}
+	}()
+	log.Println("[MAIN] OK")
+
+	log.Println("[MAIN] Waiting for all Goroutines to finish.")
+	wg.Wait()
+	log.Println("[MAIN] All Goroutines finished. Exiting...")
 }

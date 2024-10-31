@@ -13,7 +13,6 @@ import (
 	"wget/fetch"
 	"wget/globals"
 	"wget/mirror"
-	"wget/syscheck"
 )
 
 // arg represents the commandline arguments passed through the command line by the user
@@ -40,7 +39,6 @@ func Get(c ctx.Context) {
 		dType = "download"
 	}
 	if err != nil {
-		syscheck.ShowCursor()
 		fmt.Printf("\n%s failed: %v\n", dType, err)
 	}
 }
@@ -50,10 +48,10 @@ func (a *arg) Download() error {
 	var wg sync.WaitGroup
 	successfulDownloads := make(chan string, len(a.Links))
 
-	syscheck.MoveCursor(1)
-	syscheck.ClearScreen()
-	syscheck.HideCursor()
-	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
+	//syscheck.MoveCursor(1)
+	//syscheck.ClearScreen()
+	//syscheck.HideCursor()
+	//defer syscheck.ShowCursor() // Ensure cursor is shown again when done
 
 	// how many rows each download progress indicator for a given link is allocated
 	rows := 8
@@ -114,11 +112,6 @@ func (a *arg) Download() error {
 	var successList []string
 	for url := range successfulDownloads {
 		successList = append(successList, url)
-	}
-
-	if len(a.Links) != 0 {
-		// move the cursor to the terminal row after the last progress
-		syscheck.MoveCursor(len(a.Links) * rows)
 	}
 
 	if len(successList) > 1 {

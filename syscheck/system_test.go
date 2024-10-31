@@ -45,17 +45,3 @@ func TestGetTerminalWidth(t *testing.T) {
 		t.Errorf("GetTerminalWidth = %d, want %d", width, 300)
 	}
 }
-
-func Test_from(t *testing.T) {
-	function := from("Hello")
-	function()
-	// Output:
-	// Hello
-}
-
-func Test_fromArg(t *testing.T) {
-	function := fromArg("row %d")
-	function(10)
-	// Output:
-	// row 10
-}

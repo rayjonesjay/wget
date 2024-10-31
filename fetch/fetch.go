@@ -70,7 +70,7 @@ type AdvancedProgressListener struct {
 	// download in bytes/second
 	OnProgress func(downloaded, total int64, rate int32)
 	// OnDownloadFinished will be called with the time the whole content body was downloaded
-	OnDownloadFinished func(url string, time time.Time)
+	OnDownloadFinished func(url string, ok bool, time time.Time)
 }
 
 // init initializes the receiver progress listener, in place, with the default no-op status listeners
@@ -92,7 +92,7 @@ func (from *AdvancedProgressListener) init() {
 		l.OnProgress = func(downloaded, total int64, rate int32) {}
 	}
 	if from.OnDownloadFinished == nil {
-		l.OnDownloadFinished = func(url string, time time.Time) {}
+		l.OnDownloadFinished = func(url string, ok bool, time time.Time) {}
 	}
 }
 
@@ -155,9 +155,9 @@ func URL(url string, config Config) (info FileInfo, err error) {
 
 	defer func() {
 		if err != nil {
-			config.AdvancedProgressListener.OnDownloadFinished("", time.Now())
+			config.AdvancedProgressListener.OnDownloadFinished(url, false, time.Now())
 		} else {
-			config.AdvancedProgressListener.OnDownloadFinished(url, time.Now())
+			config.AdvancedProgressListener.OnDownloadFinished(url, true, time.Now())
 		}
 	}()
 
@@ -374,16 +374,32 @@ func (s *DownloadStatus) ProgressListener() *AdvancedProgressListener {
 		s.OnUpdate(s, 4)
 	}
 
-	l.OnDownloadFinished = func(url string, t time.Time) {
-		if url == "" {
+	l.OnDownloadFinished = func(url string, ok bool, t time.Time) {
+		if !ok {
 			// this download failed
-			s.Finished = fmt.Sprintf("\u001B[0;31m\nfailed at %s\u001B[0m", format(t))
+			s.Finished = fmt.Sprintf("\u001B[0;31m❌[%s]\nfailed at %s\u001B[0m", url, format(t))
 			s.OnUpdate(s, 5)
+
+			if s.ContentLength == "" {
+				s.ContentLength = "\u001B[0;31m···\u001B[0m"
+				s.OnUpdate(s, 2)
+			}
+
+			if s.SavePath == "" {
+				s.SavePath = "\u001B[0;31m···\u001B[0m"
+				s.OnUpdate(s, 3)
+			}
+
+			if s.Progress == "" {
+				s.Progress = "\u001B[0;31m···\u001B[0m"
+				s.OnUpdate(s, 4)
+			}
+
 			return
 		}
-
 		s.Finished = fmt.Sprintf("Downloaded [%s]\u001B[0;32m\nfinished at %s\u001B[0m", url, format(t))
 		s.OnUpdate(s, 5)
+
 		duration := t.Sub(s.StartTime).Truncate(time.Second)
 		if s.Total == -1 {
 			s.Total = s.Downloaded

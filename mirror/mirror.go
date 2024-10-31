@@ -22,7 +22,6 @@ import (
 	"wget/httpx"
 	"wget/mirror/links"
 	"wget/mirror/xurl"
-	"wget/syscheck"
 	"wget/temp"
 )
 
@@ -103,11 +102,6 @@ func Site(cxt ctx.Context, mirrorUrl string) error {
 		//assume the scheme is http
 		parse.Scheme = "http"
 	}
-
-	syscheck.MoveCursor(1)
-	syscheck.ClearScreen()
-	syscheck.HideCursor()
-	defer syscheck.ShowCursor() // Ensure cursor is shown again when done
 
 	m.init()
 	startTime := time.Now()
@@ -217,8 +211,8 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	{
 		// need to keep track of the total bytes downloaded
 		originalOnDownloadFinished := advancedProgressListener.OnDownloadFinished
-		advancedProgressListener.OnDownloadFinished = func(url string, time time.Time) {
-			originalOnDownloadFinished(url, time)
+		advancedProgressListener.OnDownloadFinished = func(url string, ok bool, time time.Time) {
+			originalOnDownloadFinished(url, ok, time)
 			a.mutex.Lock()
 			a.df += status.Downloaded
 			a.mutex.Unlock()
@@ -278,7 +272,7 @@ func (a *arg) Site(mirrorUrl string) (info fetch.FileInfo, err error) {
 	}
 
 	linkedUrls := links.FromHtml(doc)
-	log.Printf("Found linkedUrls: %v\n", linkedUrls)
+	//log.Printf("Found linkedUrls: %v\n", linkedUrls)
 	if len(linkedUrls) == 0 {
 		// No more links to download
 		return

@@ -2,26 +2,10 @@ package syscheck
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
 )
-
-var (
-	// HideCursor hides the terminal cursor to avoid it from blinking
-	HideCursor = from("\033[?25l")
-	// ShowCursor makes the cursor visible again
-	ShowCursor = from("\033[?25h")
-	// ClearScreen clears the terminal screen.
-	ClearScreen = from("\033[2J")
-	// MoveCursor moves the terminal cursor to the specified row, we don't need columns here
-	MoveCursor func(row int)
-)
-
-func init() {
-	MoveCursor = fromArg("\033[%d;0H")
-}
 
 // CheckOperatingSystem checks if the underlying operating system is neither Linux nor macOS
 // allows passing an OS name (used for testing)
@@ -59,16 +43,4 @@ func GetTerminalWidth() int {
 		return 300
 	}
 	return width
-}
-
-func from(format string) func() {
-	return func() {
-		fmt.Printf(format)
-	}
-}
-
-func fromArg(format string) func(int) {
-	return func(arg int) {
-		fmt.Printf(format, arg)
-	}
 }

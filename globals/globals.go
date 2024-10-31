@@ -6,12 +6,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
+	"strings"
 	"sync"
-
-	"wget/httpx"
-	"wget/syscheck"
+	"wget/terminal"
 
 	"golang.org/x/net/html"
+	"wget/httpx"
 )
 
 var (
@@ -27,6 +28,7 @@ var (
 	// AllResourceElements defines html elements that typically define their linked resource in
 	// either the "src", "href", or "data" attribute
 	AllResourceElements = MergeMaps(SrcDataElements, HrefElements)
+	ProgressTerm        *terminal.Progress
 )
 
 // MergeMaps creates a new map, whose keys and values includes merged keys and
@@ -99,13 +101,17 @@ var printLinesMutex = &sync.Mutex{}
 
 // PrintLines prints multiple lines of text starting from a specific row.
 func PrintLines(baseRow int, lines []string) {
+	if ProgressTerm == nil {
+		log.Fatalf("Instance not initialized: Bad sequence")
+	}
+
 	printLinesMutex.Lock()
 	defer printLinesMutex.Unlock()
 	for i, line := range lines {
-		i++
-		syscheck.MoveCursor(baseRow + i) // move to the correct line
-		fmt.Print("\033[K")              // clear the line
-		fmt.Print(line)
+		innerLines := strings.Split(line, "\n")
+		for i2, innerLine := range innerLines {
+			ProgressTerm.SetLine(baseRow+i+i2, innerLine)
+		}
 	}
 }
 
