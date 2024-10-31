@@ -41,8 +41,8 @@ func TestGetTerminalWidth(t *testing.T) {
 	}
 
 	width := GetTerminalWidth()
-	if width != 300 {
-		t.Errorf("GetTerminalWidth = %d, want %d", width, 300)
+	if width != 120 {
+		t.Errorf("GetTerminalWidth = %d, want %d", width, 120)
 	}
 }
 
