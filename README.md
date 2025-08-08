@@ -170,7 +170,7 @@ Before using this WGET utility, ensure that Go is installed on your system. If n
 1. **Clone the Repository**  
    Clone this WGET repository to your local machine:
    ```bash
-   $ git clone https://learn.zone01kisumu.ke/git/ramuiruri/wget.git
+   $ git clone https://github.com/rayjonesjay/wget.git
    ```
 
 2. **Navigate into the Project Directory**  
